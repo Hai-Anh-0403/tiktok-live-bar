@@ -6,6 +6,7 @@ namespace TikTokLiveGame
     {
         private const int FloorLightingLayer = 8;
         private const float DjBoothHeightOffset = 0.85f;
+        private static readonly System.Collections.Generic.List<DiscoLight> discoLights = new();
 
         public static void Build()
         {
@@ -32,23 +33,43 @@ namespace TikTokLiveGame
 
             // CreateArchitecturalBackdrop(); // Hide acoustic wall and panels
 
-            Texture2D tex = new Texture2D(2, 2, TextureFormat.RGBA32, false);
-            string path = @"D:\TIKTOK_LIVE_BAR\LiveAssets\nenamphu.png";
-            if (System.IO.File.Exists(path))
+            Texture2D tex = new Texture2D(2, 2, TextureFormat.RGBA32, true);
+            string buildRoot = System.IO.Directory.GetParent(Application.dataPath)?.FullName ?? Application.dataPath;
+            string projectRoot = System.IO.Directory.GetParent(buildRoot)?.FullName ?? buildRoot;
+            string[] candidatePaths =
+            {
+                System.IO.Path.Combine(buildRoot, "LiveAssets", "nenamphu.png"),
+                System.IO.Path.Combine(projectRoot, "LiveAssets", "nenamphu.png"),
+                @"D:\Work\LiveTiktok\tiktok-live-bar\LiveAssets\nenamphu.png",
+                @"D:\TIKTOK_LIVE_BAR\LiveAssets\nenamphu.png"
+            };
+            string path = null;
+            foreach (string candidate in candidatePaths)
+            {
+                if (System.IO.File.Exists(candidate))
+                {
+                    path = candidate;
+                    break;
+                }
+            }
+            if (!string.IsNullOrEmpty(path))
             {
                 tex.LoadImage(System.IO.File.ReadAllBytes(path));
                 tex.filterMode = FilterMode.Trilinear;
-                tex.anisoLevel = 8;
+                tex.anisoLevel = 16;
                 tex.wrapMode = TextureWrapMode.Mirror;
-                tex.Apply();
+                tex.mipMapBias = -0.5f; // giu chi tiet nen sac net hon
+                tex.Apply(true);
             }
             Shader bgShader = Shader.Find("Unlit/Texture");
             if (bgShader == null) bgShader = Shader.Find("Sprites/Default");
             Material bgMat = new Material(bgShader);
             bgMat.mainTexture = tex;
+            MaterialPropertyBlock bgBlock = new MaterialPropertyBlock();
+            bgBlock.SetTexture("_MainTex", tex);
 
             float texAspect = (float)tex.width / tex.height;
-            float H = 40f;
+            float H = 44f;
             float W = H * texAspect;
             float D = W * 3f; // Depth for side walls
 
@@ -72,35 +93,39 @@ namespace TikTokLiveGame
             GameObject centerQuad = GameObject.CreatePrimitive(PrimitiveType.Quad);
             centerQuad.name = "AmPhuBackdrop_Center";
             centerQuad.transform.SetParent(bgRoot.transform);
-            centerQuad.transform.localPosition = new Vector3(0, -3.0f, -12.5f);
+            centerQuad.transform.localPosition = new Vector3(0, -4.4f, -12.5f);
             centerQuad.transform.localScale = new Vector3(W, H, 1);
             centerQuad.transform.localRotation = Quaternion.Euler(0, 180, 0);
             centerQuad.GetComponent<Renderer>().sharedMaterial = centerMat;
+            centerQuad.GetComponent<Renderer>().SetPropertyBlock(bgBlock);
 
             GameObject leftQuad = GameObject.CreatePrimitive(PrimitiveType.Quad);
             leftQuad.name = "AmPhuBackdrop_Left";
             leftQuad.transform.SetParent(bgRoot.transform);
-            leftQuad.transform.localPosition = new Vector3(W / 2f, -3.0f, -12.5f + D / 2f);
+            leftQuad.transform.localPosition = new Vector3(W / 2f, -4.4f, -12.5f + D / 2f);
             leftQuad.transform.localScale = new Vector3(D, H, 1);
             leftQuad.transform.localRotation = Quaternion.Euler(0, -90, 0);
             leftQuad.GetComponent<Renderer>().sharedMaterial = leftMat;
+            leftQuad.GetComponent<Renderer>().SetPropertyBlock(bgBlock);
 
             GameObject rightQuad = GameObject.CreatePrimitive(PrimitiveType.Quad);
             rightQuad.name = "AmPhuBackdrop_Right";
             rightQuad.transform.SetParent(bgRoot.transform);
-            rightQuad.transform.localPosition = new Vector3(-W / 2f, -3.0f, -12.5f + D / 2f);
+            rightQuad.transform.localPosition = new Vector3(-W / 2f, -4.4f, -12.5f + D / 2f);
             rightQuad.transform.localScale = new Vector3(D, H, 1);
             rightQuad.transform.localRotation = Quaternion.Euler(0, 90, 0);
             rightQuad.GetComponent<Renderer>().sharedMaterial = rightMat;
+            rightQuad.GetComponent<Renderer>().SetPropertyBlock(bgBlock);
             
             // Trần nhà phản chiếu (Mirrored Ceiling) để chống hở mảng đen khi camera ngước lên quá cao
             GameObject ceilingQuad = GameObject.CreatePrimitive(PrimitiveType.Quad);
             ceilingQuad.name = "AmPhuBackdrop_Ceiling";
             ceilingQuad.transform.SetParent(bgRoot.transform);
-            ceilingQuad.transform.localPosition = new Vector3(0, -3.0f + H / 2f, -12.5f + D / 2f);
+            ceilingQuad.transform.localPosition = new Vector3(0, -4.4f + H / 2f, -12.5f + D / 2f);
             ceilingQuad.transform.localScale = new Vector3(W, D, 1);
             ceilingQuad.transform.localRotation = Quaternion.Euler(90, 180, 0); // Xoay 180 để mặt Quad hướng xuống dưới đất
             ceilingQuad.GetComponent<Renderer>().sharedMaterial = ceilingMat;
+            ceilingQuad.GetComponent<Renderer>().SetPropertyBlock(bgBlock);
 
             GameObject floor = GameObject.CreatePrimitive(PrimitiveType.Cube);
             floor.name = "Invisible Dance Floor";
@@ -108,34 +133,11 @@ namespace TikTokLiveGame
             floor.transform.localScale = new Vector3(100f, 0.5f, 100f);
             floor.GetComponent<Renderer>().enabled = false;
 
-            CreateRaisedStage();
-            // CreateDjVideoScreen();
-            CreateDjBooth();
-            CreateDjPerformer();
-            // CreateArchitecturalAccentLights();
-            CreateCircularTrussRig();
-            // CreateLedBarRig();
-            CreateStrobes();
-            // CreateBackgroundQuad();
-            // CreateSmokeMachines();
-
-            // CreateSpeaker(-5.4f);
-            // CreateSpeaker(5.4f);
-
-            // CreateMirrorBall();
-
-            // Group club elements and push them further back to create a huge dance space
-            GameObject clubRoot = new GameObject("ClubRoot");
-            foreach (GameObject go in Object.FindObjectsByType<GameObject>(FindObjectsSortMode.None))
-            {
-                if (go.transform.parent == null && go.name != "Invisible Dance Floor" && !go.name.Contains("AmPhuBackdrop") && go.name != "Main Camera" && go != clubRoot)
-                {
-                    go.transform.SetParent(clubRoot.transform);
-                }
-            }
-            clubRoot.transform.position = new Vector3(0, 0, -12f);
-
             new GameObject("Club Beat").AddComponent<ClubPulseController>();
+            FloorLightShow.Create();
+            MainCharacterGif.Create(new Vector3(0f, 0.72f, -4.1f));
+            DiscoBallRig.Create(new Vector3(0f, 7.15f, -2.6f), 1.05f);
+            StageLightRig.Create();
 
             AddLight("Hell Red Light", new Vector3(-6f, 7f, 1f), new Color(1f, 0.1f, 0.1f), 4.8f, 20f);
             AddLight("Hell Orange Light", new Vector3(6f, 7f, 0f), new Color(1f, 0.4f, 0f), 4.6f, 20f);

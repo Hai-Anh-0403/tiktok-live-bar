@@ -246,6 +246,7 @@ namespace TikTokLiveGame
             if (string.IsNullOrWhiteSpace(title) || titleLabel == null) return;
             SetTitleText(FormatBannerTitle(title));
             SetTitleVisible(true);
+            RefreshDecorations();
             CancelInvoke(nameof(ApplyEvolution));
             Invoke(nameof(ApplyEvolution), Mathf.Max(2f, seconds));
         }
@@ -253,7 +254,7 @@ namespace TikTokLiveGame
         private static string FormatBannerTitle(string value)
         {
             string title = value?.Trim() ?? string.Empty;
-            return title.Length <= 16 ? title : title[..15] + "…";
+            return title.Length <= 26 ? title : title[..25] + "…";
         }
 
         private void SetTitleText(string value)
@@ -285,9 +286,9 @@ namespace TikTokLiveGame
         {
             return rank switch
             {
-                1 => new Vector3(0f, 0.76f, -6.15f),
-                2 => new Vector3(-2.05f, 0.76f, -6.05f),
-                3 => new Vector3(2.05f, 0.76f, -6.05f),
+                1 => new Vector3(-2.55f, 0.65f, -4.15f),
+                2 => new Vector3(2.55f, 0.65f, -4.15f),
+                3 => new Vector3(-3.75f, 0.35f, -2.75f),
                 _ => Vector3.zero
             };
         }
@@ -362,16 +363,22 @@ namespace TikTokLiveGame
             }
             decorationScale = giftFocused ? Mathf.Max(0.55f, lineupScale) : lineupScale;
             float identityScale = Mathf.Clamp(decorationScale, 0.72f, 0.88f);
+            int titleLen = titleLabel != null && titleLabel.text != null ? titleLabel.text.Length : 0;
             if (bannerRenderer.sprite != null)
             {
                 float bannerWidth = bannerRenderer.sprite.bounds.size.x;
-                bannerRenderer.transform.localScale = Vector3.one * (bannerWidth > 0f ? 1.58f * identityScale / bannerWidth : 1f);
+                float widthFactor = titleLen > 16 ? 1.88f : 1.58f;
+                float baseScale = bannerWidth > 0f ? 1.58f * identityScale / bannerWidth : 1f;
+                bannerRenderer.transform.localScale = new Vector3(
+                    bannerWidth > 0f ? widthFactor * identityScale / bannerWidth : 1f,
+                    baseScale,
+                    1f);
             }
             float displayedCharacterHeight = Mathf.Max(0.1f, VisibleCharacterHeight(characterBaseScale.y * giftFocusScale));
             decorationBadgeY = displayedCharacterHeight + 0.22f;
             avatarRenderer.transform.localScale = avatarBaseScale * identityScale;
             nameLabel.transform.localScale = Vector3.one * identityScale;
-            float titleScale = titleLabel.text.Length <= 9 ? 0.68f : titleLabel.text.Length <= 14 ? 0.59f : 0.5f;
+            float titleScale = titleLen <= 9 ? 0.68f : titleLen <= 14 ? 0.58f : titleLen <= 19 ? 0.48f : 0.41f;
             titleLabel.transform.localScale = Vector3.one * identityScale * titleScale;
             if (titleShadowLabel != null) titleShadowLabel.transform.localScale = titleLabel.transform.localScale;
             UpdateDecorationPositions(0f);
@@ -387,16 +394,17 @@ namespace TikTokLiveGame
             wingAnchor.localPosition = new Vector3(0f, body.localPosition.y + characterHeight * 0.16f, 0.12f);
             wingAnchor.localRotation = body.localRotation;
             float identityScale = Mathf.Clamp(decorationScale, 0.72f, 0.88f);
-            // The main camera faces toward negative Z, so positive world X appears
-            // on the left side of the portrait frame.
-            avatarRenderer.transform.localPosition = new Vector3(0.58f * identityScale, decorationBadgeY + attachedBounce, -0.01f);
-            nameLabel.transform.localPosition = new Vector3(0.22f * identityScale, decorationBadgeY + attachedBounce, -0.02f);
-            float bannerY = decorationBadgeY + 0.53f * identityScale + attachedBounce;
+            // Main camera nhìn từ +Z về -Z, nên toạ độ thế giới +X nằm ở bên TRÁI khung hình người xem.
+            // Đặt avatar ở bên trái (+X) và tên người chơi ở bên phải (-X) để không đè lên avatar.
+            float avatarCenterOffset = 0.52f * identityScale;
+            avatarRenderer.transform.localPosition = new Vector3(avatarCenterOffset, decorationBadgeY + attachedBounce, -0.01f);
+            nameLabel.transform.localPosition = new Vector3(avatarCenterOffset - 0.42f * identityScale, decorationBadgeY + attachedBounce, -0.02f);
+            float bannerY = decorationBadgeY + 0.58f * identityScale + attachedBounce;
             bannerRenderer.transform.localPosition = new Vector3(0f, bannerY, -0.01f);
             float titleY = bannerY + bannerTextOffsetY * identityScale;
             titleLabel.transform.localPosition = new Vector3(0f, titleY, -0.02f);
             titleShadowLabel.transform.localPosition = new Vector3(-0.014f * identityScale, titleY - 0.018f * identityScale, -0.015f);
-            rankLabel.transform.localPosition = new Vector3(0f, bannerY + 0.34f * identityScale, 0f);
+            rankLabel.transform.localPosition = new Vector3(0f, bannerY + 0.40f * identityScale, 0f);
         }
 
         public void ChangeCharacter()
@@ -556,6 +564,8 @@ namespace TikTokLiveGame
             body.localPosition = Vector3.up * (groundOffset + bounce);
             UpdateDecorationPositions(bounce);
 
+            // Khi camera xoay, các vật thể con theo hệ toạ độ local của player sẽ bị xoay theo thế giới.
+            // Để đảm bảo avatar luôn ở bên TRÁI và nameLabel luôn ở bên PHẢI theo góc nhìn của Camera:
             Camera camera = Camera.main;
             if (camera != null)
             {
@@ -565,6 +575,20 @@ namespace TikTokLiveGame
                 titleShadowLabel.transform.rotation = camera.transform.rotation;
                 avatarRenderer.transform.rotation = camera.transform.rotation;
                 bannerRenderer.transform.rotation = camera.transform.rotation;
+
+                // Đồng bộ vị trí theo Camera.right để avatar ở bên trái và tên ở bên phải
+                float currentIdentityScale = Mathf.Clamp(decorationScale, 0.72f, 0.88f);
+                Vector3 headCenter = transform.position + Vector3.up * (decorationBadgeY + bounce * 0.72f);
+                avatarRenderer.transform.position = headCenter - camera.transform.right * (0.35f * currentIdentityScale);
+                nameLabel.transform.position = headCenter + camera.transform.right * (0.05f * currentIdentityScale);
+
+                float bannerYOffset = 0.52f * currentIdentityScale;
+                Vector3 bannerPos = headCenter + camera.transform.up * bannerYOffset;
+                bannerRenderer.transform.position = bannerPos;
+                titleLabel.transform.position = bannerPos + camera.transform.up * (bannerTextOffsetY * currentIdentityScale);
+                if (titleShadowLabel != null)
+                    titleShadowLabel.transform.position = bannerPos + camera.transform.up * ((bannerTextOffsetY - 0.016f) * currentIdentityScale) - camera.transform.right * 0.012f;
+                rankLabel.transform.position = bannerPos + camera.transform.up * (0.36f * currentIdentityScale);
             }
         }
 

@@ -18,6 +18,7 @@
     </div>
     <div class="tab-nav">
         <button class="tab-btn active" data-tab="live">🔴 Live</button>
+        <button class="tab-btn" data-tab="music">🎵 Nhạc Nền</button>
         <button class="tab-btn" data-tab="rules">⚙️ Master Rules</button>
         <button class="tab-btn" data-tab="testlab">🧪 Test Lab</button>
         <button class="tab-btn" data-tab="events">🎯 Events</button>
@@ -90,6 +91,45 @@
                     <span>Toàn màn hình</span>
                     <kbd>F11</kbd>
                 </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ── NHẠC NỀN ── -->
+<section class="tab-panel" id="tab-music">
+    <div class="page-header">
+        <p class="page-eyebrow">Âm thanh</p>
+        <h1 class="page-title">Nhạc Nền Sàn Nhảy</h1>
+        <p class="page-desc">Tải nhạc từ máy tính lên để phát trực tiếp trong game.</p>
+    </div>
+
+    <div class="grid-2">
+        <div class="card">
+            <div class="card-header">
+                <div>
+                    <p class="card-label">Tải lên</p>
+                    <h2 class="card-title">📤 Upload Nhạc Mới</h2>
+                </div>
+            </div>
+            <p class="help" style="margin-bottom:12px;">Hỗ trợ định dạng: <strong>.mp3, .wav, .ogg</strong>. Tải lên xong game sẽ tự động chuyển sang bài vừa up.</p>
+            <div class="input-row" style="margin-bottom:12px;">
+                <input type="file" id="music-file-input" accept=".mp3,.wav,.ogg" style="background:var(--bg-input);padding:8px;border-radius:6px;width:100%;color:var(--text);">
+            </div>
+            <button id="btn-upload-music" class="btn btn-primary btn-full">Tải lên & Phát bài này</button>
+            <div id="music-upload-status" style="margin-top:10px;font-size:13px;color:var(--gold);min-height:18px;"></div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <div>
+                    <p class="card-label">Danh sách trong thư mục DJ_MUSIC</p>
+                    <h2 class="card-title">🎵 Danh Sách Nhạc</h2>
+                </div>
+                <button id="btn-refresh-music" class="btn btn-secondary btn-sm">Làm mới</button>
+            </div>
+            <div id="music-file-list" class="shortcut-list" style="max-height:220px;overflow-y:auto;">
+                <p style="padding:10px;color:var(--text-sub);font-size:13px;">Đang tải danh sách...</p>
             </div>
         </div>
     </div>

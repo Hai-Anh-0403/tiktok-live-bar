@@ -24,14 +24,17 @@ namespace TikTokLiveGame
         private bool advancePending;
         private bool wasPlaying;
 
+        private static MusicPlaylistPlayer instance;
+
+        public static MusicPlaylistPlayer Instance => instance;
+
         private void Awake()
         {
+            instance = this;
             tracks = FindTracks(out string selectedFolder);
             if (tracks.Length == 0)
             {
                 Debug.Log("Music player is ready. Add MP3, WAV or OGG files to the DJ_MUSIC folder.");
-                enabled = false;
-                return;
             }
 
             configuredVolume = ReadVolume(selectedFolder);
@@ -41,7 +44,31 @@ namespace TikTokLiveGame
             output.spatialBlend = 0f;
             output.volume = 0f;
             output.priority = 128;
-            PlayTrack(0);
+            if (tracks.Length > 0) PlayTrack(0);
+        }
+
+        public void ReloadPlaylist(string playSpecificFileName = null)
+        {
+            tracks = FindTracks(out string selectedFolder);
+            configuredVolume = ReadVolume(selectedFolder);
+            if (tracks.Length == 0)
+            {
+                StopCurrentClip();
+                return;
+            }
+            int targetIdx = 0;
+            if (!string.IsNullOrEmpty(playSpecificFileName))
+            {
+                for (int i = 0; i < tracks.Length; i++)
+                {
+                    if (Path.GetFileName(tracks[i]).Equals(playSpecificFileName, StringComparison.OrdinalIgnoreCase))
+                    {
+                        targetIdx = i;
+                        break;
+                    }
+                }
+            }
+            PlayTrack(targetIdx);
         }
 
         private void Update()

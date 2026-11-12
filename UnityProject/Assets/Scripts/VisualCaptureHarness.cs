@@ -9,10 +9,25 @@ namespace TikTokLiveGame
         public static void InstallIfRequested(GameObject root)
         {
             string[] arguments = Environment.GetCommandLineArgs();
+            int quickIndex = Array.IndexOf(arguments, "-quickCapture");
+            if (quickIndex >= 0 && quickIndex + 1 < arguments.Length)
+            {
+                VisualCaptureHarness quickHarness = root.AddComponent<VisualCaptureHarness>();
+                quickHarness.StartCoroutine(quickHarness.QuickCapture(arguments[quickIndex + 1]));
+                return;
+            }
             int index = Array.IndexOf(arguments, "-capturePath");
             if (index < 0 || index + 1 >= arguments.Length) return;
             VisualCaptureHarness harness = root.AddComponent<VisualCaptureHarness>();
             harness.StartCoroutine(harness.Capture(arguments[index + 1]));
+        }
+
+        private IEnumerator QuickCapture(string path)
+        {
+            yield return new WaitForSecondsRealtime(1.8f);
+            ScreenCapture.CaptureScreenshot(path);
+            yield return new WaitForSecondsRealtime(0.8f);
+            Application.Quit();
         }
 
         private IEnumerator Capture(string path)

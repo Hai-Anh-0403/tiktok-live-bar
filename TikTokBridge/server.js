@@ -147,6 +147,75 @@ app.get('/api/gifs', async (_req, res) => {
     }
 });
 
+const musicDirs = [
+    path.join(__dirname, '..', 'DJ_MUSIC'),
+    path.join(__dirname, '..', 'Build', 'DJ_MUSIC')
+];
+
+app.get('/api/music', async (_req, res) => {
+    try {
+        const musicDir = musicDirs[0];
+        await fs.mkdir(musicDir, { recursive: true });
+        const entries = await fs.readdir(musicDir);
+        const exts = ['.mp3', '.wav', '.ogg'];
+        const files = entries.filter(f => exts.includes(path.extname(f).toLowerCase()));
+        res.json({ files });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Stream upload trực tiếp vào file trên ổ đĩa, hỗ trợ file nhạc dài / mixtape lớn đến 2GB
+app.post('/api/music/upload', async (req, res) => {
+    try {
+        const rawFileName = req.headers['x-filename'] || 'nhac.mp3';
+        const cleanName = decodeURIComponent(rawFileName).replace(/[^a-zA-Z0-9._\-]/g, '_');
+        const ext = path.extname(cleanName).toLowerCase();
+        if (!['.mp3', '.wav', '.ogg'].includes(ext)) {
+            return res.status(400).json({ error: 'Chỉ hỗ trợ file định dạng .mp3, .wav, .ogg' });
+        }
+
+        for (const dir of musicDirs) {
+            await fs.mkdir(dir, { recursive: true });
+        }
+
+        const primaryPath = path.join(musicDirs[0], cleanName);
+        const writeStream = require('fs').createWriteStream(primaryPath);
+
+        req.pipe(writeStream);
+
+        writeStream.on('finish', async () => {
+            try {
+                // Copy sang thư mục Build/DJ_MUSIC nếu khác
+                if (musicDirs[1] && musicDirs[1] !== musicDirs[0]) {
+                    const secondaryPath = path.join(musicDirs[1], cleanName);
+                    await fs.copyFile(primaryPath, secondaryPath);
+                }
+                broadcast({ type: 'music_reload', message: cleanName });
+                res.json({ success: true, fileName: cleanName });
+            } catch (copyErr) {
+                console.error('Lỗi sync nhạc sang Build:', copyErr);
+                broadcast({ type: 'music_reload', message: cleanName });
+                res.json({ success: true, fileName: cleanName });
+            }
+        });
+
+        writeStream.on('error', (err) => {
+            console.error('Lỗi ghi file nhạc:', err);
+            res.status(500).json({ error: 'Lỗi ghi file vào đĩa: ' + err.message });
+        });
+    } catch (error) {
+        console.error('Lỗi upload nhạc:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+app.post('/api/music/play', express.json(), (req, res) => {
+    const fileName = req.body && req.body.fileName ? String(req.body.fileName) : '';
+    broadcast({ type: 'music_reload', message: fileName });
+    res.json({ success: true });
+});
+
 app.use((_req, res) => res.status(404).type('text/plain').send('Not found'));
 
 function broadcast(data) {

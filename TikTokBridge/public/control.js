@@ -280,5 +280,93 @@ document.querySelectorAll('[data-action]').forEach(btn => {
     );
 });
 
+/* ═══ MUSIC MANAGEMENT ═════════════════════════════════ */
+async function loadMusicList() {
+    const listEl = document.getElementById('music-file-list');
+    if (!listEl) return;
+    try {
+        const res = await fetch('/api/music');
+        const data = await res.json();
+        if (!data.files || data.files.length === 0) {
+            listEl.innerHTML = '<p style="padding:10px;color:var(--text-sub);font-size:13px;">Thư mục trống. Hãy upload file mp3/wav/ogg ở bên trái.</p>';
+            return;
+        }
+        listEl.innerHTML = '';
+        data.files.forEach(file => {
+            const row = document.createElement('div');
+            row.className = 'shortcut-row';
+            row.style.display = 'flex';
+            row.style.justifyContent = 'space-between';
+            row.style.alignItems = 'center';
+            row.innerHTML = `
+                <span style="font-size:13px;word-break:break-all;">🎵 ${file}</span>
+                <button class="btn btn-secondary btn-sm" style="white-space:nowrap;margin-left:8px;" onclick="playTrack('${encodeURIComponent(file)}')">Phát bài này</button>
+            `;
+            listEl.appendChild(row);
+        });
+    } catch (e) {
+        listEl.innerHTML = `<p style="padding:10px;color:red;font-size:13px;">Lỗi tải danh sách: ${e.message}</p>`;
+    }
+}
+
+window.playTrack = async function(encodedFileName) {
+    const fileName = decodeURIComponent(encodedFileName);
+    const statusEl = document.getElementById('music-upload-status');
+    try {
+        await fetch('/api/music/play', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ fileName })
+        });
+        if (statusEl) statusEl.textContent = `▶ Đang chuyển sang phát: ${fileName}`;
+    } catch (e) {
+        if (statusEl) statusEl.textContent = `Lỗi: ${e.message}`;
+    }
+};
+
+document.getElementById('btn-refresh-music')?.addEventListener('click', loadMusicList);
+
+document.getElementById('btn-upload-music')?.addEventListener('click', async () => {
+    const fileInput = document.getElementById('music-file-input');
+    const statusEl = document.getElementById('music-upload-status');
+    const file = fileInput?.files?.[0];
+    if (!file) {
+        if (statusEl) statusEl.textContent = 'Vui lòng chọn 1 file nhạc (.mp3, .wav, .ogg) từ máy tính!';
+        return;
+    }
+    if (statusEl) statusEl.textContent = `Đang tải lên "${file.name}" (${(file.size / (1024*1024)).toFixed(1)} MB)...`;
+    try {
+        const buffer = await file.arrayBuffer();
+        const res = await fetch('/api/music/upload', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/octet-stream',
+                'X-FileName': encodeURIComponent(file.name)
+            },
+            body: buffer
+        });
+        const text = await res.text();
+        let result;
+        try {
+            result = JSON.parse(text);
+        } catch (jsonErr) {
+            if (statusEl) statusEl.textContent = `Lỗi máy chủ (${res.status}): ${text.substring(0, 100)}`;
+            return;
+        }
+        if (res.ok && result.success) {
+            if (statusEl) statusEl.textContent = `✔ Đã tải lên và phát ngay: ${result.fileName}`;
+            fileInput.value = '';
+            loadMusicList();
+        } else {
+            if (statusEl) statusEl.textContent = `Lỗi: ${result.error || 'Upload thất bại'}`;
+        }
+    } catch (e) {
+        if (statusEl) statusEl.textContent = `Lỗi: ${e.message}`;
+    }
+});
+
+document.querySelector('.tab-btn[data-tab="music"]')?.addEventListener('click', loadMusicList);
+
 /* ═══ INIT ═══════════════════════════════════════════════ */
 connectSocket();
+loadMusicList();

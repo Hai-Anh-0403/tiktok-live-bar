@@ -4,7 +4,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-namespace TikTokLiveBar
+namespace TikTokLiveGame
 {
     public sealed class GifPlayer : MonoBehaviour
     {
@@ -13,6 +13,7 @@ namespace TikTokLiveBar
 
         private Texture2D[] frames;
         private Renderer targetRenderer;
+        private MaterialPropertyBlock propBlock;
         private bool isReady = false;
         private int currentFrame = 0;
         private float frameTimer = 0f;
@@ -20,6 +21,7 @@ namespace TikTokLiveBar
         private void Start()
         {
             targetRenderer = GetComponent<Renderer>();
+            propBlock = new MaterialPropertyBlock();
             
             // Cài đặt material hỗ trợ trong suốt (Transparent Unlit)
             Shader transparentShader = Shader.Find("Unlit/Transparent");
@@ -80,6 +82,8 @@ namespace TikTokLiveBar
                 currentFrame = (currentFrame + 1) % frames.Length;
                 
                 targetRenderer.sharedMaterial.mainTexture = frames[currentFrame];
+                propBlock.SetTexture("_MainTex", frames[currentFrame]);
+                targetRenderer.SetPropertyBlock(propBlock);
             }
         }
         

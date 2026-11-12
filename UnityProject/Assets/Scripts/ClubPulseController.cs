@@ -31,6 +31,10 @@ namespace TikTokLiveGame
 
         private void Update()
         {
+            FloorLightShow.Instance?.Tick();
+            MainCharacterGif.Instance?.Tick();
+            DiscoBallRig.Instance?.Tick();
+            StageLightRig.Instance?.Tick();
             float beat = Time.time * bpm / 60f;
             float phase = beat - Mathf.Floor(beat);
             float pulse = Mathf.Exp(-phase * 7f);

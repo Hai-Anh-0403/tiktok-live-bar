@@ -10,7 +10,7 @@ namespace TikTokLiveGame
     {
         [SerializeField] private int maxPlayers = 400;
         [SerializeField] private float playerTtlSeconds = 600f;
-        [SerializeField] private int npcCrowdTarget = 5;
+        [SerializeField] private int npcCrowdTarget = 4;
         private readonly Dictionary<string, PlayerActor> players = new();
         private readonly List<string> playerOrder = new();
         private readonly Dictionary<string, int> crowdSlots = new();
@@ -139,15 +139,32 @@ namespace TikTokLiveGame
             {
                 Clear();
                 foreach (TikTokPlayerData player in data.players ?? System.Array.Empty<TikTokPlayerData>())
-                    Create(player);
+                {
+                    if (player == null) continue;
+                    bool isDemo = !string.IsNullOrEmpty(player.userId) && player.userId.StartsWith("demo-");
+                    if (isDemo || player.giftPower > 0 || player.score > 0)
+                        Create(player);
+                }
                 return;
             }
             if (data.type is not ("member" or "chat" or "gift" or "like" or "follow" or "share")) return;
 
-            if (data.spectatorOnly && Find(data.userId) == null) return;
-
-            PlayerActor actor = GetOrCreate(data);
-            if (actor == null) return;
+            PlayerActor actor = Find(data.userId);
+            if (actor == null)
+            {
+                bool isDemoUser = !string.IsNullOrEmpty(data.userId) &&
+                    (data.userId.StartsWith("demo-") || data.userId == "master-test");
+                // Tren Live that: chi nhung ai tang qua moi duoc tao nhan vat vao san.
+                // Tren Test Lab (Chay phong demo): van cho phep tao nguoi xem demo.
+                if (data.type != "gift" && !isDemoUser) return;
+                actor = GetOrCreate(data);
+                if (actor == null) return;
+            }
+            else
+            {
+                actor.UpdateIdentity(data);
+                actor.Touch();
+            }
 
             if (data.type == "chat")
             {
@@ -236,9 +253,9 @@ namespace TikTokLiveGame
         {
             int count = playerOrder.Count;
             float scale = count <= 30 ? 0.65f : count <= 80 ? 0.56f : count <= 140 ? 0.46f : count <= 200 ? 0.38f : count <= 280 ? 0.32f : 0.27f;
-            const float xSpacing = 0.5f;
-            const float frontEdge = 3.75f;
-            const float backEdge = -3.65f;
+            const float xSpacing = 0.52f;
+            const float frontEdge = 3.95f;
+            const float backEdge = -2.45f;
             float zSpacing = (frontEdge - backEdge) / (CrowdRows - 1);
             foreach (string userId in playerOrder)
             {
@@ -253,6 +270,12 @@ namespace TikTokLiveGame
                 float stagger = row % 2 == 0 ? 0f : xSpacing * 0.5f;
                 float x = (column - (CrowdColumns - 1) * 0.5f) * xSpacing + stagger;
                 float z = frontEdge - row * zSpacing;
+                // Chua khoang trong o giua nua sau san nhay de khong che Nhan Vat Chinh tren san khau
+                if (z < 1.15f && Mathf.Abs(x) < 1.75f)
+                {
+                    float sign = x < 0f || (Mathf.Approximately(x, 0f) && row % 2 == 0) ? -1f : 1f;
+                    x = sign * (1.75f + Mathf.Abs(x) * 0.6f);
+                }
                 float depthRatio = row / (float)(CrowdRows - 1);
                 float perspectiveScale = scale * Mathf.Lerp(1.06f, 0.86f, depthRatio);
                 actor.SetCrowdSlot(new Vector3(x, 0f, z), perspectiveScale);
