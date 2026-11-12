@@ -345,7 +345,14 @@ document.getElementById('btn-upload-music')?.addEventListener('click', async () 
             },
             body: buffer
         });
-        const result = await res.json();
+        const text = await res.text();
+        let result;
+        try {
+            result = JSON.parse(text);
+        } catch (jsonErr) {
+            if (statusEl) statusEl.textContent = `Lỗi máy chủ (${res.status}): ${text.substring(0, 100)}`;
+            return;
+        }
         if (res.ok && result.success) {
             if (statusEl) statusEl.textContent = `✔ Đã tải lên và phát ngay: ${result.fileName}`;
             fileInput.value = '';
@@ -354,7 +361,7 @@ document.getElementById('btn-upload-music')?.addEventListener('click', async () 
             if (statusEl) statusEl.textContent = `Lỗi: ${result.error || 'Upload thất bại'}`;
         }
     } catch (e) {
-        if (statusEl) statusEl.textContent = `Lỗi kết nối: ${e.message}`;
+        if (statusEl) statusEl.textContent = `Lỗi: ${e.message}`;
     }
 });
 
