@@ -16,8 +16,8 @@ Version: existing application 1.0.0; this change does not increase the version.
 
 ## HUD
 
-- A 540 × 960 minimum reference frame fits portrait and desktop viewports. Header at y=12, gift/Top cards at y=72, gift banner anchored above the feed with its bottom at virtual height minus 250 (at least y=420 for its top).
-- Header connection label reports the Unity-to-Bridge socket only; it does not certify the TikTok LIVE state.
+- A 540 × 960 minimum reference frame fits portrait and desktop viewports. The decorative venue/title/status strip has been removed from the default LIVE HUD and browser preview at the operator's request. Gift/Top cards remain at y=72; the gift banner stays above the feed with its bottom at virtual height minus 250 (at least y=420 for its top).
+- Existing controls/alternate diagnostic HUD and Party energy behavior remain available; this removal changes only the decorative default header.
 - Gift copy describes effects; Top uses real accumulated gift data. The Rosa row describes the configured medal effect. Feed draws recent entries inside a bounded bottom region.
 - Existing F1 controls, F2 chroma, F3 board toggle and F11 fullscreen remain available. Event handling, player creation, gift rules, donor accumulation, camera focus and fireworks logic are unchanged. Viewer body poses now continue moving in Idle and transition smoothly with action intensity; root spawn/jump/walk paths and gift growth/focus scale remain unchanged.
 
@@ -80,7 +80,7 @@ Run `node scripts/check-docs.js`. Review behavior notes before refreshing marker
 <!-- docs-check: UnityProject/Assets/Scripts/ClubPulseController.cs f0a3aa937cc6dfc02c78da8db446fe5cfdb2d92f5bc3750a1367ec71586fb3bb -->
 <!-- docs-check: UnityProject/Assets/Scripts/FloorLightShow.cs d86f474af19c0c9a6aa78e9f00f6d7af0000ae71f288991cba50276f39a0199f -->
 <!-- docs-check: UnityProject/Assets/Scripts/StageExtras.cs 3c6b1d384fb4f958f7d472430164bac1bc1b5f142eaa2c49aebc407c6c841885 -->
-<!-- docs-check: UnityProject/Assets/Scripts/TikTokGameController.cs 8eeb2b1c60a1a3e0d1ac1e0bb897ebf34905a83f79ff1698e11d2bc14ee24d6e -->
+<!-- docs-check: UnityProject/Assets/Scripts/TikTokGameController.cs f836e191ae5b7ca79f240ca8e87146e707a5b63601615c33bc32696fcd144d25 -->
 <!-- docs-check: UnityProject/Assets/Scripts/PlayerActor.cs abd78a3f9154e2fa5cd6e2230abdb13e50f94caf77be0ca43e389d03af1cf417 -->
 <!-- docs-check: UnityProject/Assets/Scripts/RuntimeBootstrap.cs aefb9b114492b7d2232d2c6dbf4541ecc42077723cc4c652d4f602c404c3b2e1 -->
 <!-- docs-check: UnityProject/Assets/Scripts/CharacterMotion.cs 679a091f06cb31b62eeede12820fd585509371926d63502eb89d42ba12cd363d -->

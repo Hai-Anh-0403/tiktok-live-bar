@@ -53,6 +53,10 @@ User requests a polished fall from above for new people. Reuse existing PlayerAc
 
 User additionally requests stage fire fountains. Reuse GiftEffectManager/ParticleSystem for four brief warm-color jets behind Top, add them to existing fireworks/Party triggers without replacing current effects, cap native emission at 160 particles per jet with a three-second cooldown and scheduled cleanup. Preview gets an independent Phụt lửa button, shared sprite glow geometry/texture, a bounded particle list and pause/cleanup checks. Native and browser code remain separate renderers; run actual-source CPU checks, full source syntax, Bridge/package checks and two desktop/mobile rounds before packaging.
 
+## Header removal
+
+Post-implementation UI correction: remove the entire decorative venue header from the browser preview and default Unity LIVE HUD, including its brand, subtitle, connection badge and attached energy line. Keep card positions and existing alternate HUD/controls; refresh source/preview packages and the portrait illustration.
+
 ## Original stage rollback
 
 Apply the patch only on a development branch based on eff8b3f132647ecc9e2929e388a7e9f7b542f762. Git preserves the original scene and presentation scripts. No deployment, push, restart or remote configuration change is authorized.

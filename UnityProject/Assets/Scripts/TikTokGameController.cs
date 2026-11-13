@@ -210,7 +210,6 @@ namespace TikTokLiveGame
 
             if (giftBoardVisible && !controlsVisible)
             {
-                DrawVenueHeader(width);
                 DrawGiftBoard();
                 DrawCompactTopDonors(width);
             }
@@ -238,17 +237,6 @@ namespace TikTokLiveGame
             }
 
             GUI.matrix = originalMatrix;
-        }
-
-        private void DrawVenueHeader(float width)
-        {
-            GUI.DrawTexture(new Rect(12f, 12f, width - 24f, 48f), giftBoardBg);
-            GUI.Label(new Rect(24f, 15f, 250f, 26f), "ÔNG CHÚ MMO", titleStyle);
-            GUI.Label(new Rect(24f, 39f, 260f, 18f), "LIVE DANCE CLUB", giftSubStyle);
-            string status = client != null && client.IsConnected ? "BRIDGE ONLINE" : "ĐANG KẾT NỐI";
-            GUI.Label(new Rect(width - 174f, 19f, 146f, 24f), status, giftRowRightStyle);
-            GUI.DrawTexture(new Rect(12f, 59f, width - 24f, 2f), energyBack);
-            GUI.DrawTexture(new Rect(12f, 59f, (width - 24f) * Mathf.Clamp01(partyEnergy / 1000f), 2f), energyFill);
         }
 
         private void DrawGiftBoard()

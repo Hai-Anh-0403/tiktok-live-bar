@@ -45,7 +45,7 @@ Dùng font sẵn có trong Unity, không tải font mạng. Nhãn quà và tên 
 
 ## Layout
 
-HUD dùng khung tham chiếu tối thiểu 540 × 960, co theo cả hai chiều. Header nằm trên hai thẻ quà/Top; thông báo quà neo dưới khung, phía trên vùng feed, để tránh tên/avatar khi camera focus. Sàn và người chơi là trọng tâm, tránh đặt chữ giữa mặt nhân vật. Giữ F1/F2/F3/F11 và các điều khiển hiện có.
+HUD dùng khung tham chiếu tối thiểu 540 × 960, co theo cả hai chiều. Bỏ thanh tiêu đề thương hiệu phía trên theo yêu cầu; hai thẻ quà/Top giữ vị trí y=72. Thông báo quà neo dưới khung, phía trên vùng feed, để tránh tên/avatar khi camera focus. Sàn và người chơi là trọng tâm, tránh đặt chữ giữa mặt nhân vật. Giữ F1/F2/F3/F11 và các điều khiển hiện có.
 
 ## Elevation & Depth
 
