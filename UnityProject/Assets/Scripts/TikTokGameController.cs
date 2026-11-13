@@ -23,6 +23,8 @@ namespace TikTokLiveGame
         private bool controlsVisible;
         private bool hudVisible;
         private bool giftBoardVisible = true;
+        private bool showGiftBoard = true;
+        private bool showTopBoard = true;
         private bool chromaMode;
         private int cinematicVersion;
         private bool restoreControlsAfterCinematic;
@@ -73,6 +75,8 @@ namespace TikTokLiveGame
                 giftBoardVisible = !giftBoardVisible;
                 hudVisible = giftBoardVisible;
             }
+            if (Input.GetKeyDown(KeyCode.F4)) showGiftBoard = !showGiftBoard;
+            if (Input.GetKeyDown(KeyCode.F5)) showTopBoard = !showTopBoard;
             if (Input.GetKeyDown(KeyCode.F11)) Screen.fullScreen = !Screen.fullScreen;
             for (int index = feed.Count - 1; index >= 0; index--)
                 if (Time.unscaledTime - feed[index].Time > 9f) feed.RemoveAt(index);
@@ -263,8 +267,8 @@ namespace TikTokLiveGame
             if (giftBoardVisible && !controlsVisible)
             {
                 DrawWelcomeTicker(width);
-                DrawGiftBoard();
-                DrawCompactTopDonors(width);
+                if (showGiftBoard) DrawGiftBoard();
+                if (showTopBoard) DrawCompactTopDonors(width);
             }
             if (hudVisible && !giftBoardVisible)
             {
@@ -380,7 +384,7 @@ namespace TikTokLiveGame
 
         private void DrawControls()
         {
-            GUI.Box(new Rect(18, 84, 365, 320), GUIContent.none, panelStyle);
+            GUI.Box(new Rect(18, 84, 365, 400), GUIContent.none, panelStyle);
             
             GUIStyle activeTab = new GUIStyle(buttonStyle) { normal = { background = buttonHover, textColor = Color.yellow } };
             if (GUI.Button(new Rect(34, 96, 155, 32), "KẾT NỐI & DEMO", controlTab == 0 ? activeTab : buttonStyle)) controlTab = 0;
@@ -436,6 +440,10 @@ namespace TikTokLiveGame
                 if (GUI.Button(new Rect(34, 320, 100, 36), "ẨN (F1)", buttonStyle)) controlsVisible = false;
                 if (GUI.Button(new Rect(142, 320, 223, 36), chromaMode ? "HIỆN SÂN" : "CHROMA", buttonStyle)) ToggleChroma();
             }
+            if (GUI.Button(new Rect(34, 392, 158, 36), showGiftBoard ? "ẨN QUÀ (F4)" : "HIỆN QUÀ (F4)", buttonStyle)) showGiftBoard = !showGiftBoard;
+            if (GUI.Button(new Rect(202, 392, 163, 36), showTopBoard ? "ẨN TOP (F5)" : "HIỆN TOP (F5)", buttonStyle)) showTopBoard = !showTopBoard;
+            GUI.Label(new Rect(34, 434, 330, 24), "F3: bật/tắt chung · F4: quà · F5: Top", smallStyle);
+            GUI.Label(new Rect(34, 458, 330, 20), "F6: góc quay tiếp theo", smallStyle);
         }
 
         private void ToggleChroma()

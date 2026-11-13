@@ -83,6 +83,14 @@ Khách vào xem LIVE nhận dòng “Tên khách đã vào bar” chạy từ ph
 
 Ba hạng có cánh riêng từ bộ ảnh sẵn có: Top 1 lông vũ vàng/lửa (`wings-fire`), Top 2 pha lê bạc/cyan (`wings-ice`), Top 3 neon tím/hồng (`wings-neon`). Độ rộng giảm theo hạng, đập nhẹ theo nhịp sau lưng, không thêm đèn hoặc che tên/mặt. Hạng hiện tại quyết định cánh, kể cả lúc focus quà hoặc tổng quà lớn; đổi hạng chuyển theme ngay, rời Top trở về cánh quà thông thường. Preview giữ tối đa ba bộ cánh, gắn với người giữ hạng và có nút Khách vào để thử lời chào bằng dữ liệu mô phỏng.
 
+## Board visibility
+
+Hai bảng quà/Top mặc định hiện, có thể ẩn/hiện riêng trong menu F1 hoặc qua F4 (quà), F5 (Top). F3 tiếp tục bật/tắt chung HUD và giữ lựa chọn riêng khi bật lại. Dùng nút hiện có với nhãn động “ẨN/HIỆN QUÀ”, “ẨN/HIỆN TOP”; hai nút nằm dưới nội dung của cả hai tab, không chồng điều khiển cũ. Preview có hai nút tương ứng, trạng thái aria-pressed phản ánh bảng đang hiện. Ẩn riêng bảng không ẩn lời chào, nhân vật, tên/cánh/bục Top và không ngắt dữ liệu quà/điểm. Lựa chọn áp dụng trong phiên hiện tại, không thêm cấu hình lưu trên đĩa.
+
+## Camera direction
+
+Đạo diễn tự động mở rộng thành 12 góc: toàn sàn, quét ba lớp đám đông, Top, dolly hai bên, reveal hậu cảnh, cận sân khấu/DJ, vòng cung Top, crane và orbit chéo. Lia chậm theo nhịp, điểm đầu/cuối được ease và nối khoảng hai beat giữa góc; giữ đường chân trời thẳng, không rung tay hoặc lắc roll. Góc toàn sàn/Top/DJ tính khung ngang theo tỷ lệ màn hình để khung dọc không cắt chủ thể. Quà và lời chào vào sàn tiếp tục ưu tiên; hết cận cảnh trở về góc toàn ổn định rồi mới lia tiếp. F6 chuyển góc khi đang quay tự động. Preview có nút Góc nhìn tuần tự 12 góc và chế độ Camera tự động; nút Xem Top, focus quà và Tạm dừng vẫn hoạt động.
+
 ## Do's and Don'ts
 
 - Giữ dữ liệu quà thật, cách tạo nhân vật, bảng Top và cấu hình TikFinity.

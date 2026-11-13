@@ -24,6 +24,10 @@ namespace TikTokLiveGame
         private int directorShot;
         private int directorCycle;
         private float directorShotStartBeat;
+        private Vector3 directorBlendPosition;
+        private Vector3 directorBlendLookAt;
+        private float directorBlendFov;
+        private float directorBlendStartBeat;
         private bool wasFocusing;
         private PlayerManager playerManager;
 
@@ -31,6 +35,10 @@ namespace TikTokLiveGame
         {
             currentLookAt = defaultLookAt;
             directorShotStartBeat = ClubBeatClock.Beat;
+            directorBlendStartBeat = directorShotStartBeat;
+            directorBlendPosition = transform.position;
+            directorBlendLookAt = currentLookAt;
+            directorBlendFov = GetComponent<Camera>().fieldOfView;
             playerManager = FindFirstObjectByType<PlayerManager>();
         }
 
@@ -176,6 +184,7 @@ namespace TikTokLiveGame
             else
             {
                 float beat = ClubBeatClock.Beat;
+                bool shotChanged = wasFocusing;
                 if (wasFocusing)
                 {
                     // Return to the stable establishing shot after every focus.
@@ -185,18 +194,34 @@ namespace TikTokLiveGame
                     directorShotStartBeat = beat;
                     wasFocusing = false;
                 }
+                else if (Input.GetKeyDown(KeyCode.F6))
+                {
+                    directorShot = (directorShot + 1) % 12;
+                    if (directorShot == 0) directorCycle++;
+                    directorShotStartBeat = beat;
+                    shotChanged = true;
+                }
 
                 float shotBeats = DirectorShotBars(directorShot) * 4f;
                 while (beat - directorShotStartBeat >= shotBeats)
                 {
                     directorShotStartBeat += shotBeats;
                     directorShot++;
-                    if (directorShot >= 8)
+                    if (directorShot >= 12)
                     {
                         directorShot = 0;
                         directorCycle++;
                     }
                     shotBeats = DirectorShotBars(directorShot) * 4f;
+                    shotChanged = true;
+                }
+
+                if (shotChanged)
+                {
+                    directorBlendPosition = transform.position;
+                    directorBlendLookAt = currentLookAt;
+                    directorBlendFov = GetComponent<Camera>().fieldOfView;
+                    directorBlendStartBeat = beat;
                 }
 
                 float progress = Mathf.Clamp01((beat - directorShotStartBeat) / Mathf.Max(1f, shotBeats));
@@ -205,6 +230,11 @@ namespace TikTokLiveGame
                 if (playerManager != null && playerManager.TryGetCrowdBounds(out Bounds liveCrowdBounds))
                     crowdBounds = liveCrowdBounds;
                 ConfigureDirectorShot(directorShot, directorCycle, progress, crowdBounds, ref desiredPosition, ref desiredLookAt, ref desiredFov);
+                FitDirectorShot(directorShot, crowdBounds, GetComponent<Camera>().aspect, ref desiredPosition, desiredLookAt, desiredFov);
+                float shotBlend = Smooth(Mathf.Clamp01((beat - directorBlendStartBeat) / 2f));
+                desiredPosition = Vector3.Lerp(directorBlendPosition, desiredPosition, shotBlend);
+                desiredLookAt = Vector3.Lerp(directorBlendLookAt, desiredLookAt, shotBlend);
+                desiredFov = Mathf.Lerp(directorBlendFov, desiredFov, shotBlend);
 
                 // No handheld shake in comfort mode. The dancers and lights
                 // already provide enough motion for a lively frame.
@@ -216,15 +246,51 @@ namespace TikTokLiveGame
             Quaternion targetRotation = Quaternion.LookRotation(currentLookAt - transform.position) *
                 Quaternion.Euler(handheldPitch, handheldYaw, handheldRoll);
             transform.rotation = Quaternion.Slerp(transform.rotation, targetRotation, blend);
+            if (!focusing) transform.rotation = Quaternion.LookRotation(transform.rotation * Vector3.forward);
             Camera camera = GetComponent<Camera>();
             camera.fieldOfView = Mathf.Lerp(camera.fieldOfView, desiredFov, blend);
         }
 
         private static float DirectorShotBars(int shot)
         {
-            if (shot == 5) return 4f;
+            if (shot == 5 || shot >= 8) return 4f;
             if (shot == 6) return 4.5f;
             return 3.5f;
+        }
+
+        private static Bounds DirectorFramingBounds(int shot, Bounds crowd, Vector3 lookAt)
+        {
+            if (shot == 0)
+                return new Bounds(crowd.center + Vector3.up * 1.9f, crowd.size + new Vector3(2.4f, 3.8f, 1.5f));
+            if (shot == 4 || shot == 9)
+                return new Bounds(new Vector3(-1.025f, 2.05f, -4.15f), new Vector3(10.5f, 4.4f, 1f));
+            if (shot == 8)
+                return new Bounds(new Vector3(0f, 3.3f, -4.1f), new Vector3(7.8f, 6.4f, 3f));
+            if (shot == 10)
+                return new Bounds(new Vector3(0f, 4f, -4.5f), new Vector3(14f, 8.4f, 7f));
+            return new Bounds(lookAt, new Vector3(5.8f, 3.8f, 2.5f));
+        }
+
+        private static void FitDirectorShot(int shot, Bounds crowd, float aspect, ref Vector3 position, Vector3 lookAt, float fov)
+        {
+            Bounds subjects = DirectorFramingBounds(shot, crowd, lookAt);
+            Vector3 forward = (lookAt - position).normalized;
+            Vector3 right = Vector3.Cross(Vector3.up, forward).normalized;
+            Vector3 up = Vector3.Cross(forward, right);
+            float vertical = Mathf.Tan(fov * Mathf.Deg2Rad * 0.5f) * 0.9f;
+            float horizontal = vertical * Mathf.Max(0.1f, aspect);
+            float distance = (lookAt - position).magnitude;
+            for (int corner = 0; corner < 8; corner++)
+            {
+                Vector3 point = subjects.center + new Vector3(
+                    (corner & 1) == 0 ? -subjects.extents.x : subjects.extents.x,
+                    (corner & 2) == 0 ? -subjects.extents.y : subjects.extents.y,
+                    (corner & 4) == 0 ? -subjects.extents.z : subjects.extents.z) - lookAt;
+                float depth = Vector3.Dot(point, forward);
+                distance = Mathf.Max(distance, Mathf.Abs(Vector3.Dot(point, right)) / horizontal - depth);
+                distance = Mathf.Max(distance, Mathf.Abs(Vector3.Dot(point, up)) / vertical - depth);
+            }
+            position = lookAt - forward * distance;
         }
 
         private static float Smooth(float value) => value * value * (3f - 2f * value);
@@ -288,22 +354,11 @@ namespace TikTokLiveGame
                     fov = 45f;
                     break;
                 case 4: // Track across the fixed Top 1-2-3 lineup, not the DJ.
-                    if (back < -5f)
-                    {
-                        position = Vector3.Lerp(
-                            new Vector3(-side * 2.4f, 4.85f, 6.15f),
-                            new Vector3(side * 2.4f, 4.55f, 5.25f),
-                            t
-                        );
-                        lookAt = new Vector3(0f, 2.05f, -6.05f);
-                        fov = Mathf.Lerp(43f, 40f, t);
-                    }
-                    else
-                    {
-                        position = new Vector3(Mathf.Lerp(centerX, mirroredSweepX, 0.72f), 4.9f, cameraFront - 0.45f);
-                        lookAt = new Vector3(mirroredSweepX, 1.15f, Mathf.Lerp(front, back, 0.72f));
-                        fov = 41f;
-                    }
+                    position = Vector3.Lerp(
+                        new Vector3(-1.025f - side * 2.4f, 4.85f, 6.15f),
+                        new Vector3(-1.025f + side * 2.4f, 4.55f, 5.25f), t);
+                    lookAt = new Vector3(-1.025f, 2.05f, -4.15f);
+                    fov = Mathf.Lerp(43f, 40f, t);
                     break;
                 case 5: // Gentle same-side dolly; never crosses the whole floor.
                     position = Vector3.Lerp(
@@ -327,13 +382,36 @@ namespace TikTokLiveGame
                         t);
                     fov = Mathf.Lerp(46f, 48f, t); // Giảm FOV để khung hình tập trung hơn, không bị lòi mép đen
                     break;
-                default: // Finish on the opposite half so no side is favored.
+                case 7: // Finish the crowd pass on the opposite half.
                     position = Vector3.Lerp(
                         new Vector3(centerX - side * (halfWidth + 0.8f), 5.15f, front + 8.4f),
                         new Vector3(centerX - side * 1.8f, 4.75f, front + 7.4f),
                         t);
                     lookAt = new Vector3(centerX - side * Mathf.Max(1.2f, halfWidth * 0.42f), 1.3f, middle + 0.35f);
                     fov = Mathf.Lerp(46f, 42f, t);
+                    break;
+                case 8: // Push toward the main performer with the DJ booth behind her.
+                    position = Vector3.Lerp(new Vector3(-side * 0.9f, 5.4f, 20.8f), new Vector3(side * 0.6f, 4.7f, 12.8f), t);
+                    lookAt = new Vector3(0f, 3.3f, -4.1f);
+                    fov = Mathf.Lerp(44f, 40f, t);
+                    break;
+                case 9: // A shallow arc keeps all three ranked dancers and wings together.
+                    float angle = Mathf.Lerp(-14f, 14f, t) * side * Mathf.Deg2Rad;
+                    position = new Vector3(-1.025f + Mathf.Sin(angle) * 12f, 5.8f, -4.15f + Mathf.Cos(angle) * 12f);
+                    lookAt = new Vector3(-1.025f, 2.05f, -4.15f);
+                    fov = 43f;
+                    break;
+                case 10: // Rise and pull back to reveal the complete stage.
+                    position = Vector3.Lerp(new Vector3(side * 1.4f, 5.8f, 11.2f), new Vector3(-side * 1.2f, 10.2f, 14.2f), t);
+                    lookAt = Vector3.Lerp(new Vector3(0f, 2.4f, -4.4f), new Vector3(0f, 3.1f, -5.6f), t);
+                    fov = Mathf.Lerp(46f, 50f, t);
+                    break;
+                case 11: // Opposite-side truck with a small orbit toward the stage.
+                    position = Vector3.Lerp(
+                        new Vector3(centerX - side * (halfWidth + 2.2f), 6.4f, front + 10.8f),
+                        new Vector3(centerX - side * (halfWidth * 0.65f + 1.8f), 7.1f, front + 9.6f), t);
+                    lookAt = Vector3.Lerp(new Vector3(centerX - side * 0.8f, 1.6f, middle), new Vector3(-side * 0.5f, 2.2f, -4.15f), t);
+                    fov = Mathf.Lerp(45f, 43f, t);
                     break;
             }
         }

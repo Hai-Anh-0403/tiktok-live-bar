@@ -67,6 +67,26 @@ Implementation order: verify member-to-HUD and rank-to-decoration paths; add act
 
 Post-implementation notes: Top wing placement uses the actor's feet plus bounce and 55% of visible height, since old sprites have centered pivots and new atlas sprites have bottom pivots. Ordinary gift wings retain their original placement. Review removed the unnecessary 32-grapheme name cut because Unity/Mono StringInfo differs from modern .NET; the ticker preserves received names within the existing Bridge boundary and clips the display region. Two actual-source CPU stress rounds and two desktop/mobile browser rounds cover welcome floods/expiry, name safety, all three wing tiers and rank changes alongside previous gift/entry/effect/camera behavior. These are development checks, not a native Unity/Windows release.
 
+## Independent gift/Top board visibility
+
+Status: Implemented in development; Unity/Windows validation pending.
+
+Scope: reuse Controller's F3 master display switch and existing F1 panel, add two per-board visibility flags defaulting to visible, F4/F5 shortcuts and two shared control-panel buttons. Keep the welcome strip independent of the per-board flags and preserve incoming gift/snapshot/rank behavior while boards are hidden. The browser gets matching accessible buttons and uses only visible HUD panels when placing Top identities. No persistence, dependencies, configuration or event-contract changes.
+
+Plan: verify existing controls/callers; write actual-source and browser failing checks; implement the bounded Controller/preview edits; run two stress rounds covering all visibility combinations, F3/F1, data updates while hidden and previous gift/Top/wing/entry/FX/camera behavior on desktop/mobile; review the diff; update documentation checks and source/preview artifacts. Rollback: revert this scoped dev commit. Production is unchanged.
+
+Post-implementation notes: the original F3 master remains intact; F4/F5 only gate drawing, and the shared F1 panel also describes F6. Two source-based CPU rounds and two desktop/mobile browser rounds verified independent switches, hidden score updates and previous interactions.
+
+## Expanded camera direction
+
+Status: Implemented in development; Unity/Windows validation pending.
+
+Scope: extend the existing eight native director shots to twelve with stage/DJ, ranked podium arc, crane and diagonal movement; correct the Top target to the current z=-4.15 podium row. Reuse BPM, crowd bounds and exponential camera damping; blend outgoing poses over two beats and frame director subjects for the actual aspect ratio. Focus/welcome/fireworks routing and floor anchors remain authoritative. F6 skips ahead outside focus; browser camera controls preview all twelve and an automatic director mode.
+
+Plan: inspect all focus callers and shot timing; add failing source-based projection/continuity and browser checks; implement bounded camera profiles and matching preview; run two CPU and desktop/mobile stress rounds for twelve shots, transitions, focus priority, pause and existing gameplay; review actual diff, document new controls and refresh artifacts. No dependencies, data/schema or production changes. Rollback: revert this scoped dev commit together with its docs.
+
+Post-implementation notes: subject-box framing includes the main performer at z=-4.1, the Top row at z=-4.15 and disco/crane space up to y=8.2; the framing margin is 0.9. The stage push-in starts farther away so aspect fitting still permits an approach in portrait. Existing shot 6 keeps its 4.5-bar duration. The preview consumes samples exported from the actual native profiles, with fixed representative crowd bounds. Two CPU and desktop/mobile rounds passed; native Unity rendering and a Windows executable remain unverified.
+
 ## Original stage rollback
 
 Apply the patch only on a development branch based on eff8b3f132647ecc9e2929e388a7e9f7b542f762. Git preserves the original scene and presentation scripts. No deployment, push, restart or remote configuration change is authorized.
