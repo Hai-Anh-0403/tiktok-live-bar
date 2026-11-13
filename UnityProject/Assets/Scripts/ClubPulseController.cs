@@ -23,7 +23,7 @@ namespace TikTokLiveGame
                 if (!renderer.name.StartsWith("LED") && !renderer.name.StartsWith("Floor Strip")) continue;
                 Material material = renderer.material;
                 if (material.HasProperty("_EmissionColor"))
-                    materials.Add(new MaterialState(material, material.GetColor("_EmissionColor"), materials.Count * 0.47f));
+                    materials.Add(new MaterialState(renderer, material, material.GetColor("_EmissionColor"), materials.Count * 0.47f));
             }
             GameObject disco = GameObject.Find("Disco Ball");
             if (disco != null) discoBall = disco.transform;
@@ -45,6 +45,13 @@ namespace TikTokLiveGame
                 float chase = Mathf.Pow(Mathf.Max(0f, Mathf.Sin(beat * Mathf.PI * 2f - state.Phase)), 8f);
                 float wave = 0.42f + Mathf.Sin(Time.time * 1.7f + state.Phase) * 0.15f + pulse * 0.28f + chase * 1.1f;
                 state.Material.SetColor("_EmissionColor", state.BaseEmission * wave);
+                if (state.IsEqualizer)
+                {
+                    Vector3 scale = state.BaseScale;
+                    scale.y *= 0.25f + pulse * 0.5f + chase * 1.6f;
+                    state.Transform.localScale = scale;
+                    state.Transform.localPosition = state.BasePosition + Vector3.up * ((scale.y - state.BaseScale.y) * 0.5f);
+                }
             }
             if (discoBall != null) discoBall.Rotate(0f, 38f * Time.deltaTime, 0f, Space.World);
         }
@@ -61,7 +68,20 @@ namespace TikTokLiveGame
             public readonly Material Material;
             public readonly Color BaseEmission;
             public readonly float Phase;
-            public MaterialState(Material material, Color emission, float phase) { Material = material; BaseEmission = emission; Phase = phase; }
+            public readonly Transform Transform;
+            public readonly Vector3 BaseScale;
+            public readonly Vector3 BasePosition;
+            public readonly bool IsEqualizer;
+            public MaterialState(Renderer renderer, Material material, Color emission, float phase)
+            {
+                Material = material;
+                BaseEmission = emission;
+                Phase = phase;
+                Transform = renderer.transform;
+                BaseScale = Transform.localScale;
+                BasePosition = Transform.localPosition;
+                IsEqualizer = renderer.name.StartsWith("LED Equalizer ");
+            }
         }
     }
 }

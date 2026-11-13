@@ -115,8 +115,13 @@ namespace TikTokLiveGame
             float beatFraction = beat - Mathf.Floor(beat);
             float pulse = 0.6f + 0.4f * (1f - beatFraction) * (1f - beatFraction);
 
-            actorTransform.position = basePosition;
-            actorTransform.rotation = Quaternion.identity;
+            CharacterMotion.Pose pose = CharacterMotion.Sample(beat, 0f, 0.55f);
+            float lean = pose.Lean * 0.4f;
+            float footLift = spriteRenderer.sprite == null ? 0f
+                : Mathf.Abs(Mathf.Sin(lean * Mathf.Deg2Rad)) * spriteRenderer.sprite.bounds.extents.x * CharacterScale;
+            actorTransform.position = basePosition + new Vector3(pose.Sway * 0.35f, pose.Lift * 0.35f + footLift, 0f);
+            actorTransform.rotation = Quaternion.Euler(0f, pose.Yaw * 0.25f, lean);
+            actorTransform.localScale = new Vector3(CharacterScale * (1f + pose.Stretch * 0.5f), CharacterScale * (1f - pose.Stretch * 0.35f), CharacterScale);
 
             SetGlow(podiumOuter, new Color(1f, 0.12f, 0.28f, 0.42f + 0.32f * pulse));
             SetGlow(podiumInner, new Color(1f, 0.72f, 0.2f, 0.48f + 0.35f * pulse));
@@ -201,11 +206,11 @@ namespace TikTokLiveGame
 
         private static readonly Color[] BeamPalette =
         {
-            new(1f, 0.14f, 0.28f),  // do huyet
-            new(0.82f, 0.2f, 1f),   // tim neon
-            new(1f, 0.72f, 0.18f),  // vang kim
-            new(0.15f, 0.85f, 1f),  // xanh bang
-            new(1f, 0.22f, 0.68f)   // hong neon
+            new(0.26f, 0.91f, 0.88f),
+            new(1f, 0.31f, 0.64f),
+            new(1f, 0.77f, 0.42f),
+            new(0.24f, 0.65f, 1f),
+            new(0.7f, 0.55f, 1f)
         };
 
         public static StageLightRig Instance { get; private set; }

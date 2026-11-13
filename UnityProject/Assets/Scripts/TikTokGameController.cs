@@ -202,7 +202,7 @@ namespace TikTokLiveGame
         private void OnGUI()
         {
             EnsureStyles();
-            float scale = Mathf.Clamp(Mathf.Min(Screen.width / 1080f, Screen.height / 1080f), 0.72f, 1.25f);
+            float scale = Mathf.Min(Screen.width / 540f, Screen.height / 960f);
             Matrix4x4 originalMatrix = GUI.matrix;
             GUI.matrix = Matrix4x4.Scale(new Vector3(scale, scale, 1f));
             float width = Screen.width / scale;
@@ -210,6 +210,7 @@ namespace TikTokLiveGame
 
             if (giftBoardVisible && !controlsVisible)
             {
+                DrawVenueHeader(width);
                 DrawGiftBoard();
                 DrawCompactTopDonors(width);
             }
@@ -228,9 +229,9 @@ namespace TikTokLiveGame
                 bannerStyle.fontSize = text.Length > 54 ? 15 : text.Length > 40 ? 17 : 19;
                 float bannerWidth = Mathf.Clamp(width - 24f, 260f, 680f);
                 float bannerX = (width - bannerWidth) * 0.5f;
-                float bannerY = 254f;
                 float contentHeight = bannerStyle.CalcHeight(new GUIContent(text), bannerWidth);
                 float bannerHeight = Mathf.Max(46f, contentHeight + 10f);
+                float bannerY = Mathf.Max(420f, height - 250f - bannerHeight);
                 GUI.Box(new Rect(bannerX, bannerY, bannerWidth, bannerHeight), text, bannerStyle);
                 if (giftAccent != null)
                     GUI.DrawTexture(new Rect(bannerX, bannerY, bannerWidth, 3f), giftAccent);
@@ -239,23 +240,34 @@ namespace TikTokLiveGame
             GUI.matrix = originalMatrix;
         }
 
+        private void DrawVenueHeader(float width)
+        {
+            GUI.DrawTexture(new Rect(12f, 12f, width - 24f, 48f), giftBoardBg);
+            GUI.Label(new Rect(24f, 15f, 250f, 26f), "ÔNG CHÚ MMO", titleStyle);
+            GUI.Label(new Rect(24f, 39f, 260f, 18f), "LIVE DANCE CLUB", giftSubStyle);
+            string status = client != null && client.IsConnected ? "BRIDGE ONLINE" : "ĐANG KẾT NỐI";
+            GUI.Label(new Rect(width - 174f, 19f, 146f, 24f), status, giftRowRightStyle);
+            GUI.DrawTexture(new Rect(12f, 59f, width - 24f, 2f), energyBack);
+            GUI.DrawTexture(new Rect(12f, 59f, (width - 24f) * Mathf.Clamp01(partyEnergy / 1000f), 2f), energyFill);
+        }
+
         private void DrawGiftBoard()
         {
             const float x = 12f;
-            const float y = 12f;
+            const float y = 72f;
             const float w = 238f;
             const float h = 234f;
 
             GUI.DrawTexture(new Rect(x, y, w, h), giftBoardBg);
             GUI.DrawTexture(new Rect(x, y, w, 3.5f), giftAccent);
 
-            GUI.Label(new Rect(x + 12f, y + 8f, w - 20f, 24f), "BẢNG QUÀ TẶNG VÀO SÀN", giftTitleStyle);
-            GUI.Label(new Rect(x + 12f, y + 30f, w - 20f, 20f), "★ Tặng quà để tạo NV vào sàn", giftSubStyle);
+            GUI.Label(new Rect(x + 12f, y + 8f, w - 20f, 24f), "TƯƠNG TÁC TRÊN SÀN", giftTitleStyle);
+            GUI.Label(new Rect(x + 12f, y + 30f, w - 20f, 20f), "Hiệu ứng theo quà nhận được", giftSubStyle);
 
             DrawGiftRow(x, y + 54f, w, 0, "1", "Vào sàn + Zoom");
             DrawGiftRow(x, y + 83f, w, 1, "1", "Vào sàn + Đổi NV");
             DrawGiftRow(x, y + 112f, w, 2, "5", "Đi dạo quanh sàn");
-            DrawGiftRow(x, y + 141f, w, 3, "10", "Cánh VIP + Pháo");
+            DrawGiftRow(x, y + 141f, w, 3, "10", "Cánh VIP");
             DrawGiftRow(x, y + 170f, w, 4, "199", "Hóa Khổng Lồ");
             DrawGiftRow(x, y + 199f, w, 5, "349+", "Lên Ngôi TOP DJ");
         }
@@ -279,16 +291,16 @@ namespace TikTokLiveGame
             const float w = 238f;
             const float h = 132f;
             float x = width - w - 12f;
-            const float y = 12f;
+            const float y = 72f;
 
             GUI.DrawTexture(new Rect(x, y, w, h), giftBoardBg);
             GUI.DrawTexture(new Rect(x, y, w, 3.5f), giftAccent);
-            GUI.Label(new Rect(x + 12f, y + 8f, w - 24f, 24f), "TOP ĐẠI GIA TẶNG QUÀ", giftTitleStyle);
+            GUI.Label(new Rect(x + 12f, y + 8f, w - 24f, 24f), "TOP NGƯỜI ỦNG HỘ", giftTitleStyle);
 
             if (top.Length == 0)
             {
-                GUI.Label(new Rect(x + 12f, y + 42f, w - 24f, 24f), "Chưa có ai lên bảng...", giftRowLeftStyle);
-                GUI.Label(new Rect(x + 12f, y + 68f, w - 24f, 24f), "Tặng quà để chiếm TOP 1!", giftSubStyle);
+                GUI.Label(new Rect(x + 12f, y + 42f, w - 24f, 24f), "Chưa có quà trong phiên", giftRowLeftStyle);
+                GUI.Label(new Rect(x + 12f, y + 68f, w - 24f, 24f), "Cảm ơn anh em đã ghé chơi", giftSubStyle);
                 return;
             }
 
@@ -417,18 +429,20 @@ namespace TikTokLiveGame
 
         private void DrawFeed(float width, float height)
         {
-            float feedWidth = Mathf.Max(280f, width - 36f);
+            float feedWidth = Mathf.Min(680f, width - 36f);
+            float feedX = (width - feedWidth) * 0.5f;
             float y = height - 36f;
             for (int i = feed.Count - 1; i >= 0; i--)
             {
                 FeedEntry item = feed[i];
                 float itemHeight = Mathf.Max(26f, smallStyle.CalcHeight(new GUIContent(item.Text), feedWidth) + 2f);
                 y -= itemHeight + 3f;
+                if (y < Mathf.Max(420f, height - 220f)) break;
                 Color old = GUI.color;
                 GUI.color = new Color(0f, 0f, 0f, 0.85f);
-                GUI.Label(new Rect(19f, y + 1f, feedWidth, itemHeight), item.Text, smallStyle);
+                GUI.Label(new Rect(feedX + 1f, y + 1f, feedWidth, itemHeight), item.Text, smallStyle);
                 GUI.color = item.Color;
-                GUI.Label(new Rect(18f, y, feedWidth, itemHeight), item.Text, smallStyle);
+                GUI.Label(new Rect(feedX, y, feedWidth, itemHeight), item.Text, smallStyle);
                 GUI.color = old;
             }
         }
@@ -443,16 +457,16 @@ namespace TikTokLiveGame
             Texture2D input = Solid(new Color(0.01f, 0.01f, 0.025f, 0.98f));
             energyBack = Solid(new Color(0.05f, 0.05f, 0.12f, 0.95f));
             energyFill = Solid(new Color(0.1f, 0.9f, 1f, 1f));
-            giftBoardBg = Solid(new Color(0.04f, 0.01f, 0.08f, 0.84f));
-            giftAccent = Solid(new Color(1f, 0.22f, 0.45f, 0.95f));
+            giftBoardBg = Solid(new Color(0.025f, 0.043f, 0.082f, 0.93f));
+            giftAccent = Solid(new Color(0.26f, 0.91f, 0.88f, 0.95f));
             coinIcon = CreateCoinIcon();
             giftIcons = LoadGiftIcons();
             panelStyle = new GUIStyle(GUI.skin.box) { normal = { background = panel }, border = new RectOffset(8, 8, 8, 8) };
-            titleStyle = new GUIStyle(GUI.skin.label) { fontSize = 22, fontStyle = FontStyle.Bold, normal = { textColor = Color.white } };
+            titleStyle = new GUIStyle(GUI.skin.label) { fontSize = 20, fontStyle = FontStyle.Bold, normal = { textColor = Color.white } };
             labelStyle = new GUIStyle(GUI.skin.label) { fontSize = 18, normal = { textColor = new Color(0.75f, 0.93f, 1f) }, clipping = TextClipping.Clip };
             smallStyle = new GUIStyle(GUI.skin.label) { fontSize = 15, fontStyle = FontStyle.Bold, wordWrap = true, normal = { textColor = new Color(0.82f, 0.86f, 0.94f) } };
             rankStyle = new GUIStyle(smallStyle) { fontSize = 18, fontStyle = FontStyle.Bold };
-            giftTitleStyle = new GUIStyle(GUI.skin.label) { fontSize = 15, fontStyle = FontStyle.Bold, normal = { textColor = new Color(1f, 0.86f, 0.28f) } };
+            giftTitleStyle = new GUIStyle(GUI.skin.label) { fontSize = 15, fontStyle = FontStyle.Bold, normal = { textColor = new Color(0.9f, 0.96f, 1f) } };
             giftSubStyle = new GUIStyle(GUI.skin.label) { fontSize = 13, fontStyle = FontStyle.Bold, normal = { textColor = new Color(0.38f, 0.98f, 0.86f) } };
             giftRowLeftStyle = new GUIStyle(GUI.skin.label) { fontSize = 13, fontStyle = FontStyle.Bold, clipping = TextClipping.Clip, normal = { textColor = Color.white } };
             giftCoinStyle = new GUIStyle(GUI.skin.label) { fontSize = 13, fontStyle = FontStyle.Bold, normal = { textColor = new Color(1f, 0.88f, 0.25f) } };
@@ -466,7 +480,7 @@ namespace TikTokLiveGame
                 wordWrap = true,
                 alignment = TextAnchor.MiddleCenter,
                 padding = new RectOffset(14, 14, 8, 8),
-                normal = { background = Solid(new Color(0.28f, 0.025f, 0.24f, 0.95f)), textColor = Color.white }
+                normal = { background = Solid(new Color(0.04f, 0.1f, 0.18f, 0.96f)), textColor = Color.white }
             };
         }
 

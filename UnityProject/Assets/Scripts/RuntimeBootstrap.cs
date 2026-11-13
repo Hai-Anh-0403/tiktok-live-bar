@@ -13,7 +13,8 @@ namespace TikTokLiveGame
             QualitySettings.vSyncCount = 0;
             Application.targetFrameRate = 60;
             Application.runInBackground = true;
-            Screen.SetResolution(540, 960, false);
+            if (!HasResolutionOverride(System.Environment.GetCommandLineArgs()))
+                Screen.SetResolution(540, 960, false);
             ClubSceneBuilder.Build();
 
             GameObject root = new("TikTok Live Game");
@@ -26,6 +27,13 @@ namespace TikTokLiveGame
             TikTokGameController game = root.AddComponent<TikTokGameController>();
             game.Initialize(client, players, giftEffects);
             VisualCaptureHarness.InstallIfRequested(root);
+        }
+
+        internal static bool HasResolutionOverride(string[] arguments)
+        {
+            return arguments != null &&
+                (System.Array.IndexOf(arguments, "-screen-width") >= 0 ||
+                System.Array.IndexOf(arguments, "-screen-height") >= 0);
         }
     }
 }

@@ -13,11 +13,11 @@ namespace TikTokLiveGame
 
         private static readonly Color[] Palette =
         {
-            new(1f, 0.08f, 0.12f),  // do
-            new(0.75f, 0.1f, 1f),   // tim
-            new(1f, 0.45f, 0.05f),  // cam
-            new(0.1f, 0.75f, 1f),   // xanh neon
-            new(1f, 0.1f, 0.6f)     // hong
+            new(0.26f, 0.91f, 0.88f),
+            new(0.44f, 0.28f, 1f),
+            new(1f, 0.31f, 0.64f),
+            new(0.24f, 0.65f, 1f),
+            new(1f, 0.77f, 0.42f)
         };
 
         private struct LightPool
@@ -112,7 +112,7 @@ namespace TikTokLiveGame
             int colorShift = Mathf.FloorToInt(beat / 4f);
             float time = Time.time;
 
-            SetColor(centerGlow, new Color(0.85f, 0.05f, 0.25f, 0.16f + 0.14f * pulse));
+            SetColor(centerGlow, new Color(0.12f, 0.45f, 0.55f, 0.12f + 0.1f * pulse));
 
             for (int index = 0; index < pools.Length; index++)
             {

@@ -18,6 +18,7 @@ namespace TikTokLiveGame
         private Vector3 home;
         private Vector3 normalHome;
         private float phase;
+        private float motionIntensity = 0.4f;
         private float actionUntil;
         private float walkStartedAt;
         private float walkDuration;
@@ -547,21 +548,36 @@ namespace TikTokLiveGame
             visualAlpha = Mathf.Lerp(visualAlpha, targetAlpha, 1f - Mathf.Exp(-7f * Time.deltaTime));
             ApplyAlpha();
 
-            float time = Time.time + phase;
-            bool isPerforming = action is ActionState.Dance or ActionState.Jump or ActionState.Celebrate;
-            flipbook.SetPlaybackSpeed(isPerforming ? 2.7f : 1.5f);
-            float bounce = isPerforming ? Mathf.Abs(Mathf.Sin(time * 13.125f)) * 0.16f : 0f;
-            body.localRotation = isPerforming
-                ? Quaternion.Euler(0f, Mathf.Sin(time * 3.75f) * 5f, Mathf.Sin(time * 9.375f) * 2.5f)
-                : Quaternion.identity;
-            float pulse = action == ActionState.Celebrate ? 1f + Mathf.Sin(time * 16.875f) * 0.08f : 1f;
-            Vector3 displayedScale = characterBaseScale * pulse * effectScale * giftFocusScale;
+            float targetMotion = action switch
+            {
+                ActionState.Celebrate => 1f,
+                ActionState.Dance => 0.75f,
+                ActionState.Jump => 0.65f,
+                ActionState.Walk => 0.55f,
+                _ => 0.4f
+            };
+            motionIntensity = Mathf.Lerp(motionIntensity, targetMotion, 1f - Mathf.Exp(-6f * Time.deltaTime));
+            CharacterMotion.Pose pose = CharacterMotion.Sample(ClubBeatClock.Beat, phase, motionIntensity);
+            flipbook.SetPlaybackSpeed(Mathf.Lerp(1.05f, 1.7f, motionIntensity));
+            float bounce = pose.Lift * lineupScale;
+            body.localRotation = Quaternion.Euler(0f, pose.Yaw, pose.Lean);
+            Vector3 displayedScale = Vector3.Scale(
+                characterBaseScale * effectScale * giftFocusScale,
+                new Vector3(1f + pose.Stretch, 1f - pose.Stretch * 0.7f, 1f)
+            );
             body.localScale = displayedScale;
             float rawHeight = characterRenderer.sprite == null ? 0f : characterRenderer.sprite.bounds.size.y * displayedScale.y;
-            float groundOffset = characterRenderer.sprite == null
-                ? 0f
-                : -characterRenderer.sprite.bounds.min.y * displayedScale.y - rawHeight * BottomPaddingFraction();
-            body.localPosition = Vector3.up * (groundOffset + bounce);
+            float groundOffset = 0f;
+            if (characterRenderer.sprite != null)
+            {
+                Bounds bounds = characterRenderer.sprite.bounds;
+                float sine = Mathf.Sin(pose.Lean * Mathf.Deg2Rad);
+                float cosine = Mathf.Cos(pose.Lean * Mathf.Deg2Rad);
+                float minimumY = bounds.center.x * displayedScale.x * sine + bounds.center.y * displayedScale.y * cosine
+                    - Mathf.Abs(sine) * bounds.extents.x * displayedScale.x - Mathf.Abs(cosine) * bounds.extents.y * displayedScale.y;
+                groundOffset = -minimumY - rawHeight * BottomPaddingFraction();
+            }
+            body.localPosition = new Vector3(pose.Sway * lineupScale, groundOffset + bounce, 0f);
             UpdateDecorationPositions(bounce);
 
             // Khi camera xoay, các vật thể con theo hệ toạ độ local của player sẽ bị xoay theo thế giới.

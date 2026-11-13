@@ -10,7 +10,7 @@ namespace TikTokLiveGame
 
         public static void Build()
         {
-            RenderSettings.ambientLight = new Color(0.15f, 0.02f, 0.05f);
+            RenderSettings.ambientLight = new Color(0.12f, 0.16f, 0.23f);
             RenderSettings.fog = false;
             RenderSettings.fogColor = new Color(0.04f, 0.005f, 0.01f);
             RenderSettings.fogMode = FogMode.ExponentialSquared;
@@ -133,15 +133,61 @@ namespace TikTokLiveGame
             floor.transform.localScale = new Vector3(100f, 0.5f, 100f);
             floor.GetComponent<Renderer>().enabled = false;
 
+            CreateRaisedStage();
+            CreateDjBooth();
+            CreateLedSideArrays();
+            CreateFestivalSet();
+            CreateSpeaker(-6f);
+            CreateSpeaker(6f);
+
             new GameObject("Club Beat").AddComponent<ClubPulseController>();
             FloorLightShow.Create();
             MainCharacterGif.Create(new Vector3(0f, 0.72f, -4.1f));
             DiscoBallRig.Create(new Vector3(0f, 7.15f, -2.6f), 1.05f);
             StageLightRig.Create();
 
-            AddLight("Hell Red Light", new Vector3(-6f, 7f, 1f), new Color(1f, 0.1f, 0.1f), 4.8f, 20f);
-            AddLight("Hell Orange Light", new Vector3(6f, 7f, 0f), new Color(1f, 0.4f, 0f), 4.6f, 20f);
-            AddLight("Stage Demon Light", new Vector3(0f, 8f, -7f), new Color(0.8f, 0f, 0.2f), 5.8f, 23f);
+            AddLight("Club Cyan Wash", new Vector3(-6f, 7f, 1f), new Color(0.26f, 0.91f, 0.88f), 4.8f, 20f);
+            AddLight("Club Pink Wash", new Vector3(6f, 7f, 0f), new Color(1f, 0.31f, 0.64f), 4.6f, 20f);
+            AddLight("Stage Gold Wash", new Vector3(0f, 8f, -7f), new Color(1f, 0.77f, 0.42f), 5.8f, 23f);
+        }
+
+        private static void CreateFestivalSet()
+        {
+            Color cyan = new(0.26f, 0.91f, 0.88f);
+            Color pink = new(1f, 0.31f, 0.64f);
+            Color gold = new(1f, 0.77f, 0.42f);
+            Material deck = GameMaterials.Lit(new Color(0.018f, 0.028f, 0.05f), 0.5f, 0.65f, new Color(0.008f, 0.015f, 0.03f));
+            CreateLitBox("Club Dance Deck", new Vector3(0f, -0.08f, 0f), new Vector3(25f, 0.16f, 20f), deck);
+            CreateBox("Club Portal Backplate", new Vector3(0f, 4.65f, -10.7f), new Vector3(13.9f, 8.1f, 0.12f), new Color(0.012f, 0.02f, 0.04f), new Color(0.006f, 0.012f, 0.026f));
+
+            for (int depth = 0; depth < 3; depth++)
+            {
+                float halfWidth = 6.7f - depth * 0.72f;
+                float bottom = 0.8f + depth * 0.22f;
+                float top = 8.6f - depth * 0.62f;
+                float z = -10.5f + depth * 0.4f;
+                Color glow = depth == 1 ? pink : cyan;
+                for (int side = -1; side <= 1; side += 2)
+                    CreateBox($"LED Portal Upright {depth}-{side}", new Vector3(side * halfWidth, (top + bottom) * 0.5f, z), new Vector3(0.065f, top - bottom, 0.065f), glow * 0.1f, glow * 1.1f);
+                CreateBox($"LED Portal Crown {depth}", new Vector3(0f, top, z), new Vector3(halfWidth * 2f, 0.065f, 0.065f), glow * 0.1f, glow * 1.1f);
+            }
+
+            for (int index = -6; index <= 6; index++)
+                CreateBox($"Floor Strip Lane {index}", new Vector3(index, 0.008f, 0f), new Vector3(0.015f, 0.012f, 10.2f), cyan * 0.025f, cyan * 0.13f);
+            for (int index = -4; index <= 4; index++)
+                CreateBox($"Floor Strip Cross {index}", new Vector3(0f, 0.009f, index * 1.1f), new Vector3(13.1f, 0.012f, 0.015f), pink * 0.025f, pink * 0.1f);
+            CreateBox("LED Floor Front Border", new Vector3(0f, 0.025f, 5.2f), new Vector3(13.3f, 0.035f, 0.035f), cyan * 0.08f, cyan * 0.6f);
+
+            for (int side = -1; side <= 1; side += 2)
+            {
+                CreateBox($"LED Floor Border {side}", new Vector3(side * 6.65f, 0.025f, 0f), new Vector3(0.035f, 0.035f, 10.5f), cyan * 0.08f, cyan * 0.6f);
+                CreateOrientedCylinder($"VIP Podium {side}", new Vector3(side * 2.55f, 0.28f, -4.15f), new Vector3(1.9f, 0.35f, 1.9f), Vector3.zero, deck);
+                CreateOrientedCylinder($"VIP Podium Rim {side}", new Vector3(side * 2.55f, 0.63f, -4.15f), new Vector3(1.93f, 0.015f, 1.93f), Vector3.zero, GameMaterials.Club(gold * 0.15f, gold * 0.6f));
+            }
+            CreateOrientedCylinder("Main Character Plinth", new Vector3(0f, 0.35f, -4.1f), new Vector3(2.9f, 0.35f, 2.9f), Vector3.zero, deck);
+            CreateOrientedCylinder("Main Character Plinth Rim", new Vector3(0f, 0.7f, -4.1f), new Vector3(2.94f, 0.015f, 2.94f), Vector3.zero, GameMaterials.Club(pink * 0.15f, pink * 0.55f));
+            CreateOrientedCylinder("VIP Third Podium", new Vector3(-3.75f, 0.15f, -2.75f), new Vector3(1.6f, 0.18f, 1.6f), Vector3.zero, deck);
+            CreateOrientedCylinder("VIP Third Podium Rim", new Vector3(-3.75f, 0.345f, -2.75f), new Vector3(1.63f, 0.015f, 1.63f), Vector3.zero, GameMaterials.Club(gold * 0.15f, gold * 0.45f));
         }
 
         private static void CreateRaisedStage()
@@ -151,8 +197,8 @@ namespace TikTokLiveGame
             CreateLitBox("DJ Stage Deck", new Vector3(0f, 0.2f, -7.3f), new Vector3(13f, 1.1f, 4f), deck);
             CreateLitBox("DJ Stage Front", new Vector3(0f, 0.32f, -5.22f), new Vector3(13.2f, 0.86f, 0.22f), fascia);
 
-            Color cyan = new(1f, 0.1f, 0.1f);
-            Color violet = new(0.6f, 0f, 0.2f);
+            Color cyan = new(0.26f, 0.91f, 0.88f);
+            Color violet = new(1f, 0.31f, 0.64f);
             CreateBox("Stage Fascia Top Strip", new Vector3(0f, 0.7f, -5.085f), new Vector3(12.7f, 0.035f, 0.035f), cyan * 0.08f, cyan * 0.55f);
             CreateBox("Stage Fascia Bottom Strip", new Vector3(0f, -0.02f, -5.085f), new Vector3(12.7f, 0.025f, 0.035f), violet * 0.06f, violet * 0.35f);
             for (int index = 0; index < 18; index++)
@@ -197,8 +243,8 @@ namespace TikTokLiveGame
             CreateLitBox("DJ Booth Inset", new Vector3(0f, 1.18f + DjBoothHeightOffset, -6.99f), new Vector3(5.55f, 0.76f, 0.055f), glass);
             CreateLitBox("DJ Booth Top Cap", new Vector3(0f, 1.92f + DjBoothHeightOffset, -7.55f), new Vector3(6.72f, 0.13f, 1.42f), chassis);
 
-            Color cyan = new(1f, 0.1f, 0.1f);
-            Color violet = new(0.6f, 0f, 0.2f);
+            Color cyan = new(0.26f, 0.91f, 0.88f);
+            Color violet = new(1f, 0.31f, 0.64f);
             CreateBox("DJ Booth Cyan Rail", new Vector3(0f, 1.87f + DjBoothHeightOffset, -6.95f), new Vector3(6.12f, 0.035f, 0.035f), cyan * 0.06f, cyan * 0.52f);
             CreateBox("DJ Booth Violet Rail", new Vector3(0f, 0.54f + DjBoothHeightOffset, -6.95f), new Vector3(5.62f, 0.028f, 0.03f), violet * 0.05f, violet * 0.38f);
 
@@ -207,7 +253,7 @@ namespace TikTokLiveGame
                 float x = Mathf.Lerp(-2.45f, 2.45f, index / 16f);
                 float height = 0.12f + Mathf.Abs(Mathf.Sin(index * 1.37f)) * 0.38f;
                 Color glow = index % 3 == 0 ? violet : cyan;
-                CreateBox($"Booth Equalizer {index}", new Vector3(x, 1.02f + DjBoothHeightOffset, -6.945f), new Vector3(0.12f, height, 0.025f), glow * 0.035f, glow * 0.3f);
+                CreateBox($"LED Equalizer {index}", new Vector3(x, 1.02f + DjBoothHeightOffset, -6.945f), new Vector3(0.12f, height, 0.025f), glow * 0.035f, glow * 0.8f);
             }
 
             CreateLitBox("DJ Console", new Vector3(0f, 2.06f + DjBoothHeightOffset, -7.55f), new Vector3(4.9f, 0.16f, 0.86f), chassis);

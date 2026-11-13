@@ -6,6 +6,8 @@ namespace TikTokLiveGame.Editor
 {
     public sealed class CharacterTextureImporter : AssetPostprocessor
     {
+        public override uint GetVersion() => 1;
+
         private void OnPreprocessTexture()
         {
             bool isCharacter = assetPath.StartsWith("Assets/Resources/Characters/");
@@ -21,7 +23,7 @@ namespace TikTokLiveGame.Editor
             importer.alphaIsTransparency = true;
             importer.filterMode = FilterMode.Bilinear;
             importer.wrapMode = TextureWrapMode.Clamp;
-            importer.textureCompression = isCharacter ? TextureImporterCompression.Compressed : TextureImporterCompression.Uncompressed;
+            importer.textureCompression = TextureImporterCompression.Uncompressed;
             importer.maxTextureSize = isNpcAvatar ? 256 : isCharacter ? 512 : 2048;
         }
     }
