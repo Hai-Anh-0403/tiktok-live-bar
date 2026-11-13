@@ -158,7 +158,8 @@ app.get('/api/music', async (_req, res) => {
         await fs.mkdir(musicDir, { recursive: true });
         const entries = await fs.readdir(musicDir);
         const exts = ['.mp3', '.wav', '.ogg'];
-        const files = entries.filter(f => exts.includes(path.extname(f).toLowerCase()));
+        const files = entries.filter(f => exts.includes(path.extname(f).toLowerCase()))
+            .sort((a, b) => a.toUpperCase() < b.toUpperCase() ? -1 : a.toUpperCase() > b.toUpperCase() ? 1 : 0);
         res.json({ files });
     } catch (error) {
         res.status(500).json({ error: error.message });
@@ -191,12 +192,11 @@ app.post('/api/music/upload', async (req, res) => {
                     const secondaryPath = path.join(musicDirs[1], cleanName);
                     await fs.copyFile(primaryPath, secondaryPath);
                 }
-                broadcast({ type: 'music_reload', message: cleanName });
+                if (req.query.autoplay !== 'false') broadcast({ type: 'music_reload', message: cleanName });
                 res.json({ success: true, fileName: cleanName });
             } catch (copyErr) {
                 console.error('Lỗi sync nhạc sang Build:', copyErr);
-                broadcast({ type: 'music_reload', message: cleanName });
-                res.json({ success: true, fileName: cleanName });
+                res.status(500).json({ error: 'Không thể đồng bộ nhạc sang Build: ' + copyErr.message });
             }
         });
 

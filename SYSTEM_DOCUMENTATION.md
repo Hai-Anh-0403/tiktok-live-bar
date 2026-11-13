@@ -73,9 +73,17 @@ Version: existing application 1.0.0; this change does not increase the version.
 - LaunchFireworks still starts the original firework sound, aerial sequence and cold-fountain sequence; it now also requests the flame jets. Existing gift thresholds, event actions and Party energy rules are unchanged. The new C# method does not add a WebSocket command.
 - The preview provides a Phụt lửa button and combines jets with its fireworks demonstration. A reusable 640-point buffer and four base glows limit allocations; each wave stops by 1.5 seconds and obeys the same three-second cooldown. Pause freezes particle positions/colors and timing. It is a separate concept renderer, not native particle-rendering evidence.
 
+## Music upload and playback
+
+- The Windows control page remains http://127.0.0.1:3000/control.html, tab Nhạc Nền (run.bat starts the Bridge). Multiple MP3/WAV/OGG files are uploaded sequentially, using each File as the request body instead of buffering the full audio in JavaScript. Per-file progress and a busy state prevent simultaneous upload/play actions. Invalid extensions and collisions after the existing filename normalization are rejected before a batch starts.
+- GET /api/music returns case-insensitive filename order for the displayed, numbered playlist. The existing native MusicPlaylistPlayer orders tracks by StringComparer.OrdinalIgnoreCase; sanitized upload names contain ASCII letters/digits/dot/underscore/hyphen. Prefix names with 01, 02, 03 for a preferred sequence. No new playlist file or metadata schema is introduced.
+- POST /api/music/upload accepts the optional query autoplay=false to suppress music_reload during storage/synchronization. The default remains immediate playback for existing clients. Success retains {success:true,fileName}; write/copy failures report an error and do not start playback. Existing primary DJ_MUSIC and Build/DJ_MUSIC locations remain in use.
+- After a successful multi-file batch, the control page calls existing POST /api/music/play with fileName:"" once to start the displayed playlist from the beginning. A single upload still plays that uploaded file, preserving previous behavior. The new Phát từ đầu danh sách button and existing per-track play buttons use the same endpoint. Partial upload failure stops the batch without autoplay; completed uploads remain available.
+- The native MusicPlaylistPlayer source remains unchanged: ReloadPlaylist refreshes tracks, natural completion schedules the next index, and the last track wraps to the first. Existing MP3/WAV/OGG loading, fades, volume, watchdog and decode-failure handling remain. Runtime decoding and audible playback on Windows still require native validation.
+
 ## IPC, configuration and dependencies
 
-No WebSocket schema, API, TikFinity setting, player data or package dependency changes. Existing Unity native resolution command-line options are honored when supplied; otherwise the original 540 x 960 window default remains. The launcher continues to run TikTokBridge/server.js. Existing configuration and personal media must not be overwritten.
+WebSocket schemas, TikFinity settings, player data and package dependencies are unchanged. The HTTP music API change is limited to the optional autoplay flag, deterministic list order and explicit copy-failure reporting described above. Existing Unity native resolution command-line options are honored when supplied; otherwise the original 540 x 960 window default remains. The launcher continues to run TikTokBridge/server.js. Preserve configuration and personal media when applying the source patch.
 
 ## Verification and release
 
@@ -109,3 +117,15 @@ Run `node scripts/check-docs.js`. Review behavior notes before refreshing marker
 <!-- docs-check: UnityProject/Assets/Editor/CharacterMotionChecks.cs 79f35260b03698d1532944e0e3a29bf27e84e897655c9cc5ba352019b3122a96 -->
 <!-- docs-check: UnityProject/Assets/Editor/CharacterLibraryChecks.cs a1e3f955dff269f8848a360c36762c59391d156f4923fe69e762eb705003ee22 -->
 <!-- docs-check: UnityProject/Assets/Resources/Characters/club_cast.png 8e3e695c75c4abf259258df064a3aca6d9958ac89b306f54be8c7347f30dbe91 -->
+
+<!-- docs-check: UnityProject/Assets/Scripts/MusicPlaylistPlayer.cs b364a77b49271de35d53e55021f07e179a50f55706323ad69b4ec0ffb9bbb501 -->
+
+<!-- docs-check: TikTokBridge/server.js 3cc777ca3567017eef96be5371041c6f129642613df42a6674eae2f331f363f4 -->
+
+<!-- docs-check: TikTokBridge/public/control.js b989cb1973033f2a4e7a2220e30b1fc868cee1d50c9bf84b8cca4d20657f2500 -->
+
+<!-- docs-check: TikTokBridge/public/control.html affcf2cd83767adfb502a85125ad9a19ca6309c4c7fe0ced0ccee68d39165fbc -->
+
+<!-- docs-check: TikTokBridge/public/control.css 3c5b8de156c8adf8fa5a29601e8b4c162ed69a84824ead7ff69da2cac27086ec -->
+
+<!-- docs-check: TikTokBridge/test/music-upload.test.js c0f1e4eeebdcb52eabbbe8ceb0610b3bcd51cd0104eae4528efc6428ba0aace7 -->

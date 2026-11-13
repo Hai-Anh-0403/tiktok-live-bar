@@ -852,6 +852,10 @@ kbd {
 
 /* ─── Responsive ─────────────────────────────────────────── */
 @media (max-width: 820px) {
+    .navbar         { gap: 10px; padding: 0 14px; }
+    .navbar-brand   { margin-right: 0; }
+    .navbar-brand-text { display: none; }
+    .tab-nav        { min-width: 0; overflow-x: auto; }
     .grid-2          { grid-template-columns: 1fr; }
     .col-span-2      { grid-column: auto; }
     .stats-grid      { grid-template-columns: repeat(3,1fr); }

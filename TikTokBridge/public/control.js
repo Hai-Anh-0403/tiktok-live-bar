@@ -281,87 +281,124 @@ document.querySelectorAll('[data-action]').forEach(btn => {
 });
 
 /* ═══ MUSIC MANAGEMENT ═════════════════════════════════ */
+let musicUploadInProgress = false;
+
+function setMusicUploadInProgress(busy) {
+    musicUploadInProgress = busy;
+    document.querySelectorAll('#music-file-input, #btn-upload-music, #btn-play-music-list, #music-file-list button')
+        .forEach(element => { element.disabled = busy; });
+}
+
 async function loadMusicList() {
     const listEl = document.getElementById('music-file-list');
     if (!listEl) return;
     try {
         const res = await fetch('/api/music');
         const data = await res.json();
+        if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
         if (!data.files || data.files.length === 0) {
-            listEl.innerHTML = '<p style="padding:10px;color:var(--text-sub);font-size:13px;">Thư mục trống. Hãy upload file mp3/wav/ogg ở bên trái.</p>';
+            listEl.textContent = 'Thư mục trống. Hãy tải lên file .mp3, .wav, .ogg.';
             return;
         }
-        listEl.innerHTML = '';
-        data.files.forEach(file => {
+        listEl.replaceChildren();
+        data.files.forEach((file, index) => {
             const row = document.createElement('div');
             row.className = 'shortcut-row';
-            row.style.display = 'flex';
-            row.style.justifyContent = 'space-between';
-            row.style.alignItems = 'center';
-            row.innerHTML = `
-                <span style="font-size:13px;word-break:break-all;">🎵 ${file}</span>
-                <button class="btn btn-secondary btn-sm" style="white-space:nowrap;margin-left:8px;" onclick="playTrack('${encodeURIComponent(file)}')">Phát bài này</button>
-            `;
+            const label = document.createElement('span');
+            label.style.minWidth = '0';
+            label.style.overflowWrap = 'anywhere';
+            label.textContent = `${index + 1}. ${file}`;
+            const button = document.createElement('button');
+            button.className = 'btn btn-secondary btn-sm';
+            button.style.flexShrink = '0';
+            button.style.marginLeft = '8px';
+            button.textContent = 'Phát bài này';
+            button.disabled = musicUploadInProgress;
+            button.addEventListener('click', () => window.playTrack(encodeURIComponent(file)));
+            row.append(label, button);
             listEl.appendChild(row);
         });
     } catch (e) {
-        listEl.innerHTML = `<p style="padding:10px;color:red;font-size:13px;">Lỗi tải danh sách: ${e.message}</p>`;
+        listEl.textContent = `Lỗi tải danh sách: ${e.message}`;
     }
 }
 
+async function requestMusicPlay(fileName) {
+    const res = await fetch('/api/music/play', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ fileName })
+    });
+    const result = await res.json();
+    if (!res.ok || !result.success) throw new Error(result.error || `Không thể phát nhạc (HTTP ${res.status})`);
+}
+
 window.playTrack = async function(encodedFileName) {
-    const fileName = decodeURIComponent(encodedFileName);
+    if (musicUploadInProgress) return;
     const statusEl = document.getElementById('music-upload-status');
     try {
-        await fetch('/api/music/play', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ fileName })
-        });
-        if (statusEl) statusEl.textContent = `▶ Đang chuyển sang phát: ${fileName}`;
+        const fileName = decodeURIComponent(encodedFileName);
+        await requestMusicPlay(fileName);
+        if (statusEl) statusEl.textContent = fileName
+            ? `▶ Đã gửi yêu cầu phát: ${fileName}`
+            : '▶ Đã gửi yêu cầu phát từ đầu danh sách.';
     } catch (e) {
         if (statusEl) statusEl.textContent = `Lỗi: ${e.message}`;
     }
 };
 
 document.getElementById('btn-refresh-music')?.addEventListener('click', loadMusicList);
+document.getElementById('btn-play-music-list')?.addEventListener('click', () => window.playTrack(''));
 
 document.getElementById('btn-upload-music')?.addEventListener('click', async () => {
+    if (musicUploadInProgress) return;
     const fileInput = document.getElementById('music-file-input');
     const statusEl = document.getElementById('music-upload-status');
-    const file = fileInput?.files?.[0];
-    if (!file) {
-        if (statusEl) statusEl.textContent = 'Vui lòng chọn 1 file nhạc (.mp3, .wav, .ogg) từ máy tính!';
+    const files = Array.from(fileInput?.files || []);
+    if (files.length === 0) {
+        if (statusEl) statusEl.textContent = 'Vui lòng chọn file nhạc (.mp3, .wav, .ogg) từ máy tính!';
         return;
     }
-    if (statusEl) statusEl.textContent = `Đang tải lên "${file.name}" (${(file.size / (1024*1024)).toFixed(1)} MB)...`;
-    try {
-        const buffer = await file.arrayBuffer();
-        const res = await fetch('/api/music/upload', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/octet-stream',
-                'X-FileName': encodeURIComponent(file.name)
-            },
-            body: buffer
-        });
-        const text = await res.text();
-        let result;
-        try {
-            result = JSON.parse(text);
-        } catch (jsonErr) {
-            if (statusEl) statusEl.textContent = `Lỗi máy chủ (${res.status}): ${text.substring(0, 100)}`;
+    const names = new Set();
+    for (const file of files) {
+        const normalizedName = file.name.replace(/[^a-zA-Z0-9._\-]/g, '_').toLowerCase();
+        if (!/\.(mp3|wav|ogg)$/i.test(file.name)) {
+            if (statusEl) statusEl.textContent = `Lỗi: Chỉ hỗ trợ .mp3, .wav, .ogg: ${file.name}`;
             return;
         }
-        if (res.ok && result.success) {
-            if (statusEl) statusEl.textContent = `✔ Đã tải lên và phát ngay: ${result.fileName}`;
-            fileInput.value = '';
-            loadMusicList();
-        } else {
-            if (statusEl) statusEl.textContent = `Lỗi: ${result.error || 'Upload thất bại'}`;
+        if (names.has(normalizedName)) {
+            if (statusEl) statusEl.textContent = `Lỗi: Tên file trùng sau chuẩn hóa (không phân biệt hoa/thường): ${file.name}`;
+            return;
         }
+        names.add(normalizedName);
+    }
+    let uploadedCount = 0;
+    let uploadedFileName = '';
+    setMusicUploadInProgress(true);
+    try {
+        for (const file of files) {
+            if (statusEl) statusEl.textContent = `Đang tải ${uploadedCount + 1}/${files.length}: ${file.name}`;
+            const res = await fetch('/api/music/upload?autoplay=false', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/octet-stream',
+                    'X-FileName': encodeURIComponent(file.name)
+                },
+                body: file
+            });
+            const result = await res.json();
+            if (!res.ok || !result.success) throw new Error(result.error || `Upload thất bại (HTTP ${res.status})`);
+            uploadedCount += 1;
+            uploadedFileName = result.fileName;
+        }
+        await requestMusicPlay(files.length === 1 ? uploadedFileName : '');
+        if (statusEl) statusEl.textContent = `✔ Đã tải lên ${uploadedCount}/${files.length}. Đã gửi yêu cầu phát ${files.length === 1 ? uploadedFileName : 'từ đầu danh sách'}.`;
+        fileInput.value = '';
     } catch (e) {
-        if (statusEl) statusEl.textContent = `Lỗi: ${e.message}`;
+        if (statusEl) statusEl.textContent = `Đã tải lên ${uploadedCount}/${files.length}. Lỗi: ${e.message}`;
+    } finally {
+        setMusicUploadInProgress(false);
+        await loadMusicList();
     }
 });
 

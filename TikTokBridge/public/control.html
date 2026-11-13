@@ -112,12 +112,13 @@
                     <h2 class="card-title">📤 Upload Nhạc Mới</h2>
                 </div>
             </div>
-            <p class="help" style="margin-bottom:12px;">Hỗ trợ định dạng: <strong>.mp3, .wav, .ogg</strong>. Tải lên xong game sẽ tự động chuyển sang bài vừa up.</p>
+            <p class="help" id="music-upload-help" style="margin-bottom:12px;">Chọn một hoặc nhiều file <strong>.mp3, .wav, .ogg</strong>. Một file: phát bài vừa tải. Nhiều file: tải xong tất cả rồi phát toàn bộ thư mục theo tên A→Z, không phân biệt hoa/thường; giữ các bài cũ và tự chuyển bài, lặp danh sách. Đặt tiền tố <strong>01, 02…</strong> để chọn thứ tự riêng.</p>
+            <label class="field-label" for="music-file-input">Chọn các bài nhạc</label>
             <div class="input-row" style="margin-bottom:12px;">
-                <input type="file" id="music-file-input" accept=".mp3,.wav,.ogg" style="background:var(--bg-input);padding:8px;border-radius:6px;width:100%;color:var(--text);">
+                <input type="file" id="music-file-input" multiple accept=".mp3,.wav,.ogg" aria-describedby="music-upload-help" style="background:var(--bg-input);padding:8px;border-radius:6px;width:100%;min-width:0;color:var(--text);">
             </div>
-            <button id="btn-upload-music" class="btn btn-primary btn-full">Tải lên & Phát bài này</button>
-            <div id="music-upload-status" style="margin-top:10px;font-size:13px;color:var(--gold);min-height:18px;"></div>
+            <button id="btn-upload-music" class="btn btn-primary btn-full">Tải lên & Phát nhạc</button>
+            <div id="music-upload-status" role="status" aria-live="polite" style="margin-top:10px;font-size:13px;color:var(--gold);min-height:18px;overflow-wrap:anywhere;"></div>
         </div>
 
         <div class="card">
@@ -128,6 +129,7 @@
                 </div>
                 <button id="btn-refresh-music" class="btn btn-secondary btn-sm">Làm mới</button>
             </div>
+            <button id="btn-play-music-list" class="btn btn-secondary btn-full" style="margin-bottom:12px;">Phát từ đầu danh sách</button>
             <div id="music-file-list" class="shortcut-list" style="max-height:220px;overflow-y:auto;">
                 <p style="padding:10px;color:var(--text-sub);font-size:13px;">Đang tải danh sách...</p>
             </div>

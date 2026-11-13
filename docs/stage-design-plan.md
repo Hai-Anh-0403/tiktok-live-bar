@@ -87,6 +87,18 @@ Plan: inspect all focus callers and shot timing; add failing source-based projec
 
 Post-implementation notes: subject-box framing includes the main performer at z=-4.1, the Top row at z=-4.15 and disco/crane space up to y=8.2; the framing margin is 0.9. The stage push-in starts farther away so aspect fitting still permits an approach in portrait. Existing shot 6 keeps its 4.5-bar duration. The preview consumes samples exported from the actual native profiles, with fixed representative crowd bounds. Two CPU and desktop/mobile rounds passed; native Unity rendering and a Windows executable remain unverified.
 
+## Multiple music uploads and ordered playback
+
+Status: Implemented in development; native audio validation pending.
+
+Scope: extend the existing Nhạc Nền tab and upload endpoint. Select multiple MP3/WAV/OGG files, validate them before starting, upload sequentially with autoplay suppressed, then request playback once. Multiple uploads start the displayed playlist from the beginning; one upload preserves the old behavior of playing that file. Keep existing tracks and per-track playback. Order is case-insensitive filename A–Z, matching the existing native player for sanitized upload names; numeric prefixes provide custom order. No playlist schema or native player change is required.
+
+Contract: POST /api/music/upload?autoplay=false stores/synchronizes without emitting music_reload; absent flag retains immediate playback. GET /api/music returns sorted names. Existing POST /api/music/play with an empty fileName reloads from index zero, and native MusicPlaylistPlayer automatically advances and wraps. Reject invalid extensions and normalized filename collisions before a batch; stop on upload/copy failure without starting the incomplete list. Do not remove existing files.
+
+Plan: add failing isolated HTTP/WebSocket contract tests using temporary music folders; implement the minimal Bridge/DOM edits; verify bulk progress, duplicate-click protection, error recovery, old single/per-track behavior and playlist order in two desktop/mobile rounds; verify unchanged native auto-next logic with explicit boundary doubles; review actual changes, update documentation hashes and include Bridge sources/tests in the source package. Rollback: revert the scoped music commit; media files are not deleted.
+
 ## Original stage rollback
 
 Apply the patch only on a development branch based on eff8b3f132647ecc9e2929e388a7e9f7b542f762. Git preserves the original scene and presentation scripts. No deployment, push, restart or remote configuration change is authorized.
+
+Music development verification: six isolated HTTP/WebSocket cases and two full UI rounds across desktop/mobile/320px and dark/light preferences passed; 25 Bridge tests passed. Two actual-source CPU rounds confirmed existing next/wrap behavior. The optional autoplay flag preserves legacy single-upload behavior; native audio decoding remains unverified.

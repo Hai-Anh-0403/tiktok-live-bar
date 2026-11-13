@@ -91,6 +91,10 @@ Hai bảng quà/Top mặc định hiện, có thể ẩn/hiện riêng trong men
 
 Đạo diễn tự động mở rộng thành 12 góc: toàn sàn, quét ba lớp đám đông, Top, dolly hai bên, reveal hậu cảnh, cận sân khấu/DJ, vòng cung Top, crane và orbit chéo. Lia chậm theo nhịp, điểm đầu/cuối được ease và nối khoảng hai beat giữa góc; giữ đường chân trời thẳng, không rung tay hoặc lắc roll. Góc toàn sàn/Top/DJ tính khung ngang theo tỷ lệ màn hình để khung dọc không cắt chủ thể. Quà và lời chào vào sàn tiếp tục ưu tiên; hết cận cảnh trở về góc toàn ổn định rồi mới lia tiếp. F6 chuyển góc khi đang quay tự động. Preview có nút Góc nhìn tuần tự 12 góc và chế độ Camera tự động; nút Xem Top, focus quà và Tạm dừng vẫn hoạt động.
 
+## Music control panel
+
+Tab Nhạc Nền dùng giao diện đen/vàng, card, nút và font có sẵn của trang điều khiển; không đổi theme chung. Cho chọn nhiều MP3/WAV/OGG, hiện tiến độ theo từng bài và khóa thao tác phát/upload trùng trong lúc tải. Danh sách đánh số theo tên file A–Z (không phân biệt hoa/thường), khớp bộ phát hiện tại với tên upload đã chuẩn hóa; hướng dẫn đặt 01, 02, 03 nếu muốn thứ tự riêng. Nhiều bài tải xong mới phát danh sách từ đầu; một bài vẫn phát bài vừa tải. Có nút Phát từ đầu danh sách và các nút phát từng bài cũ. Lỗi ghi/đồng bộ phải hiện rõ, không báo phát thành công khi upload lỗi. Giữ tên bài bằng textContent, nhãn input rõ, trạng thái aria-live và bố cục một cột trên mobile.
+
 ## Do's and Don'ts
 
 - Giữ dữ liệu quà thật, cách tạo nhân vật, bảng Top và cấu hình TikFinity.
