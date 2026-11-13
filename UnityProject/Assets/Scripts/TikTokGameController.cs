@@ -12,6 +12,9 @@ namespace TikTokLiveGame
         private ClubCameraController clubCamera;
         private readonly Dictionary<string, Donor> donors = new();
         private readonly List<FeedEntry> feed = new();
+        private readonly Queue<(string Text, float Time)> welcomeQueue = new();
+        private string welcomeText;
+        private float welcomeStartedAt;
         private string username = "";
         private string connectionStatus = "Đang chờ Node server...";
         private int events;
@@ -46,6 +49,7 @@ namespace TikTokLiveGame
         private GUIStyle giftRowLeftStyle;
         private GUIStyle giftCoinStyle;
         private GUIStyle giftRowRightStyle;
+        private GUIStyle welcomeStyle;
 
         private int controlTab = 0;
         private string manualUsername = "Khách VIP";
@@ -72,6 +76,7 @@ namespace TikTokLiveGame
             if (Input.GetKeyDown(KeyCode.F11)) Screen.fullScreen = !Screen.fullScreen;
             for (int index = feed.Count - 1; index >= 0; index--)
                 if (Time.unscaledTime - feed[index].Time > 9f) feed.RemoveAt(index);
+            AdvanceWelcomeTicker();
         }
 
         private void HandleEvent(TikTokEvent liveEvent)
@@ -109,6 +114,7 @@ namespace TikTokLiveGame
             else if (liveEvent.type == "member")
             {
                 AddEnergy(1f);
+                QueueWelcomeTicker(liveEvent);
             }
             else if (liveEvent.type is "follow" or "share")
             {
@@ -125,6 +131,9 @@ namespace TikTokLiveGame
                 partyEnergy = 0f;
                 donors.Clear();
                 feed.Clear();
+                welcomeQueue.Clear();
+                welcomeText = null;
+                welcomeStartedAt = 0f;
             }
 
             playerManager.Handle(liveEvent);
@@ -199,6 +208,49 @@ namespace TikTokLiveGame
             if (feed.Count > 7) feed.RemoveAt(0);
         }
 
+        private static string CleanWelcomeName(string name)
+        {
+            return string.Concat((name ?? string.Empty).Select(character =>
+                char.IsControl(character) || char.IsWhiteSpace(character) ? ' ' : character)).Trim();
+        }
+
+        private void QueueWelcomeTicker(TikTokEvent liveEvent)
+        {
+            string name = CleanWelcomeName(liveEvent.nickname);
+            if (string.IsNullOrEmpty(name)) name = CleanWelcomeName(liveEvent.uniqueId);
+            if (string.IsNullOrEmpty(name)) name = "Khách mới";
+            welcomeQueue.Enqueue(($"{name} đã vào bar", Time.unscaledTime));
+            if (welcomeQueue.Count > 8) welcomeQueue.Dequeue();
+            AdvanceWelcomeTicker();
+        }
+
+        private void AdvanceWelcomeTicker()
+        {
+            float now = Time.unscaledTime;
+            while (welcomeQueue.Count > 0 && now - welcomeQueue.Peek().Time > 24f)
+                welcomeQueue.Dequeue();
+            if (!string.IsNullOrEmpty(welcomeText) && now - welcomeStartedAt < 8f) return;
+            welcomeText = null;
+            if (welcomeQueue.Count == 0) return;
+            welcomeText = welcomeQueue.Dequeue().Text;
+            welcomeStartedAt = now;
+        }
+
+        private void DrawWelcomeTicker(float width)
+        {
+            if (string.IsNullOrEmpty(welcomeText)) return;
+            float panelWidth = Mathf.Min(width - 24f, 680f);
+            Rect panel = new((width - panelWidth) * 0.5f, 12f, panelWidth, 40f);
+            GUI.DrawTexture(panel, giftBoardBg);
+            GUI.DrawTexture(new Rect(panel.x, panel.y, panelWidth, 3f), giftAccent);
+            GUI.BeginGroup(panel);
+            float textWidth = welcomeStyle.CalcSize(new GUIContent(welcomeText)).x;
+            float progress = Mathf.Clamp01((Time.unscaledTime - welcomeStartedAt) / 8f);
+            float textX = Mathf.Lerp(panelWidth, -textWidth, progress);
+            GUI.Label(new Rect(textX, 0f, textWidth, 40f), welcomeText, welcomeStyle);
+            GUI.EndGroup();
+        }
+
         private void OnGUI()
         {
             EnsureStyles();
@@ -210,6 +262,7 @@ namespace TikTokLiveGame
 
             if (giftBoardVisible && !controlsVisible)
             {
+                DrawWelcomeTicker(width);
                 DrawGiftBoard();
                 DrawCompactTopDonors(width);
             }
@@ -455,6 +508,7 @@ namespace TikTokLiveGame
             smallStyle = new GUIStyle(GUI.skin.label) { fontSize = 15, fontStyle = FontStyle.Bold, wordWrap = true, normal = { textColor = new Color(0.82f, 0.86f, 0.94f) } };
             rankStyle = new GUIStyle(smallStyle) { fontSize = 18, fontStyle = FontStyle.Bold };
             giftTitleStyle = new GUIStyle(GUI.skin.label) { fontSize = 15, fontStyle = FontStyle.Bold, normal = { textColor = new Color(0.9f, 0.96f, 1f) } };
+            welcomeStyle = new GUIStyle(giftTitleStyle) { fontSize = 18, richText = false, wordWrap = false, clipping = TextClipping.Clip, alignment = TextAnchor.MiddleLeft, padding = new RectOffset(0, 0, 0, 0) };
             giftSubStyle = new GUIStyle(GUI.skin.label) { fontSize = 13, fontStyle = FontStyle.Bold, normal = { textColor = new Color(0.38f, 0.98f, 0.86f) } };
             giftRowLeftStyle = new GUIStyle(GUI.skin.label) { fontSize = 13, fontStyle = FontStyle.Bold, clipping = TextClipping.Clip, normal = { textColor = Color.white } };
             giftCoinStyle = new GUIStyle(GUI.skin.label) { fontSize = 13, fontStyle = FontStyle.Bold, normal = { textColor = new Color(1f, 0.88f, 0.25f) } };

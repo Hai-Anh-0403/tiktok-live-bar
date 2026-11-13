@@ -57,6 +57,16 @@ User additionally requests stage fire fountains. Reuse GiftEffectManager/Particl
 
 Post-implementation UI correction: remove the entire decorative venue header from the browser preview and default Unity LIVE HUD, including its brand, subtitle, connection badge and attached energy line. Keep card positions and existing alternate HUD/controls; refresh source/preview packages and the portrait illustration.
 
+## Viewer welcome and ranked-wing refinement
+
+Status: Implemented in development; native Unity/Windows validation pending.
+
+Scope: add a top scrolling welcome for the existing `member` event and give the current Top 1/2/3 different wings. Reuse TikFinity normalization, Controller HUD, PlayerActor wing renderer/anchor and existing fire/ice/neon sprites. Viewer entry must not bypass the existing player join rules. The ticker is clipped at virtual y=12, height=40, 8 seconds per name, at most eight pending names with a 24-second expiry; reset clears it. Ranked wings override gift-focus/score variants for wings only; non-Top gift wings, titles, identity, podiums and actions remain.
+
+Implementation order: verify member-to-HUD and rank-to-decoration paths; add actual-source failing checks; implement the two bounded native changes and matching local preview; exercise event floods, name safety, reset, rank swaps, focus and demotion in two CPU rounds; run two desktop/mobile browser rounds covering new and previous controls; review actual diff, update documentation hashes and source/preview artifacts. No new dependency or live-server/config change. Rollback is a revert of this scoped dev commit.
+
+Post-implementation notes: Top wing placement uses the actor's feet plus bounce and 55% of visible height, since old sprites have centered pivots and new atlas sprites have bottom pivots. Ordinary gift wings retain their original placement. Review removed the unnecessary 32-grapheme name cut because Unity/Mono StringInfo differs from modern .NET; the ticker preserves received names within the existing Bridge boundary and clips the display region. Two actual-source CPU stress rounds and two desktop/mobile browser rounds cover welcome floods/expiry, name safety, all three wing tiers and rank changes alongside previous gift/entry/effect/camera behavior. These are development checks, not a native Unity/Windows release.
+
 ## Original stage rollback
 
 Apply the patch only on a development branch based on eff8b3f132647ecc9e2929e388a7e9f7b542f762. Git preserves the original scene and presentation scripts. No deployment, push, restart or remote configuration change is authorized.

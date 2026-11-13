@@ -18,8 +18,10 @@ Version: existing application 1.0.0; this change does not increase the version.
 
 - A 540 × 960 minimum reference frame fits portrait and desktop viewports. The decorative venue/title/status strip has been removed from the default LIVE HUD and browser preview at the operator's request. Gift/Top cards remain at y=72; the gift banner stays above the feed with its bottom at virtual height minus 250 (at least y=420 for its top).
 - Existing controls/alternate diagnostic HUD and Party energy behavior remain available; this removal changes only the decorative default header.
+- Viewer arrivals (`member`, including spectator-only events with `joinedNow=false`) show “Name đã vào bar” in a clipped 40-pixel strip at virtual y=12, centered with width min(viewport width minus 24, 680). Each name scrolls right-to-left for eight unscaled seconds. The strip hides when idle, while controls are open or when the default gift board is hidden; the former decorative brand header remains removed.
+- The welcome queue holds at most eight pending arrivals, discards the oldest on overflow and expires pending items after 24 seconds. Reset clears both active and pending messages. Names fall back from nickname to uniqueId to “Khách mới” and replace control/whitespace characters with spaces. The ticker preserves the received name, reusing the existing Bridge limits of 80 UTF-16 code units for nickname and 64 for uniqueId. It does not add a second truncation, which avoids splitting flags or ZWJ emoji with older Unity/Mono StringInfo behavior. Rich text is disabled and the rendering region clips the scrolling text. This consumes the existing member event and does not change who may join the floor, create points or focus the camera.
 - Gift copy describes effects; Top uses real accumulated gift data. The Rosa row describes the configured medal effect. Feed draws recent entries inside a bounded bottom region.
-- Existing F1 controls, F2 chroma, F3 board toggle and F11 fullscreen remain available. Event handling, player creation, gift rules, donor accumulation, camera focus and fireworks logic are unchanged. Viewer body poses now continue moving in Idle and transition smoothly with action intensity; root spawn/jump/walk paths and gift growth/focus scale remain unchanged.
+- Existing F1 controls, F2 chroma, F3 board toggle and F11 fullscreen remain available. Existing player creation, gift rules, donor accumulation, camera focus and fireworks logic are unchanged; the member event additionally feeds the welcome strip. Viewer body poses now continue moving in Idle and transition smoothly with action intensity; root spawn/jump/walk paths and gift growth/focus scale remain unchanged.
 
 ## Character clarity and motion
 
@@ -40,6 +42,12 @@ Version: existing application 1.0.0; this change does not increase the version.
 - Real Top uses gift-score totals received by the tool, including snapshot data; it is not a separate query of TikTok's global leaderboard. Top 1 is at (-2.55,0.65,-4.15), Top 2 at (2.55,0.65,-4.15), Top 3 at (-4.6,0.55,-4.15). All three podiums are now at the stage edge; the third actor's feet match its raised rim. Existing names, avatars, TOP labels, rank scaling and the upper-right donor board remain unchanged. Ranked players still retain existing gift actions, including temporary walks before returning to their assigned podium.
 - The preview starts with eight actors: four legacy and four new. It binds podium identities/ranks/simulated scores to the same donor objects as its board. “Xem Top” frames the podium actors and dims other actors; labels choose free slots between HUD cards and controls, including during camera transitions. “Đổi nhân vật” demonstrates a different family while preserving the selected identity and points. These are local simulation controls, not LIVE commands. Repeated Rose demos reuse the same guest and accumulate that guest's score; passing a ranked score moves that guest to the corresponding podium.
 - Native verification menu: TikTok Live Game > Verify Character Diversity checks all original clips, six-family balance, different-family changes, atlas bounds/pivots and cache identity, restoring Editor random state afterward. Actual-source CPU tests and browser checks do not replace importing and running the Windows game in Unity.
+
+## Ranked wing themes
+
+- The current Top 1 uses the existing gold/orange `Banners/wings-fire`, Top 2 the silver/cyan `wings-ice`, and Top 3 the violet/pink `wings-neon`. Rank takes priority over gift-focus and total-gift wing variants. Ordinary gift/VIP wings, banner/title variants, score calculation and podium assignment retain their existing rules.
+- Base wing widths are clamped by tier: Top 1 2.55-2.8, Top 2 2.2-2.4, Top 3 1.85-2.05 world units. Small 2.5% horizontal and 1.2% vertical flutter uses the scaled game clock; it follows actor position, body rotation and visibility alpha behind the character. Ranked wings anchor above the feet independently of centered legacy sprites versus the bottom-pivot cast atlas. Changing character refreshes its decoration size; rank swaps transfer the theme and demotion restores the ordinary gift wing behavior. No new sprite asset, material, light or dependency is added to the native game.
+- `TikTok Live Game > Verify Rank Wings` checks all three original resources, rank priority across gift thresholds and focus, descending bounded widths, sorting/alpha, changes of rank/character and demotion. The preview reuses exactly three wing sprites attached to the current ranked donors, including when a new donor overtakes third place at 400 actors. “Khách vào” simulates a viewer greeting without adding a dancer or score. Preview Pause freezes the welcome scroll and wings; reduced-motion preference displays the greeting statically.
 
 ## New-player drop and landing
 
@@ -80,8 +88,8 @@ Run `node scripts/check-docs.js`. Review behavior notes before refreshing marker
 <!-- docs-check: UnityProject/Assets/Scripts/ClubPulseController.cs f0a3aa937cc6dfc02c78da8db446fe5cfdb2d92f5bc3750a1367ec71586fb3bb -->
 <!-- docs-check: UnityProject/Assets/Scripts/FloorLightShow.cs d86f474af19c0c9a6aa78e9f00f6d7af0000ae71f288991cba50276f39a0199f -->
 <!-- docs-check: UnityProject/Assets/Scripts/StageExtras.cs 3c6b1d384fb4f958f7d472430164bac1bc1b5f142eaa2c49aebc407c6c841885 -->
-<!-- docs-check: UnityProject/Assets/Scripts/TikTokGameController.cs f836e191ae5b7ca79f240ca8e87146e707a5b63601615c33bc32696fcd144d25 -->
-<!-- docs-check: UnityProject/Assets/Scripts/PlayerActor.cs abd78a3f9154e2fa5cd6e2230abdb13e50f94caf77be0ca43e389d03af1cf417 -->
+<!-- docs-check: UnityProject/Assets/Scripts/TikTokGameController.cs af4c27c5cd659fa55d514de798eb70760665a85bd06cbb49ba66ffd24e33c3f9 -->
+<!-- docs-check: UnityProject/Assets/Scripts/PlayerActor.cs 18f6130192025000d02d40398c7938092e1afd4e14b43b67d9d00a3c040189f7 -->
 <!-- docs-check: UnityProject/Assets/Scripts/RuntimeBootstrap.cs aefb9b114492b7d2232d2c6dbf4541ecc42077723cc4c652d4f602c404c3b2e1 -->
 <!-- docs-check: UnityProject/Assets/Scripts/CharacterMotion.cs 679a091f06cb31b62eeede12820fd585509371926d63502eb89d42ba12cd363d -->
 <!-- docs-check: UnityProject/Assets/Scripts/CharacterLibrary.cs 0583a1c9149da2e4e45497cf76d245e3505747e83629b485625341fd2f35e5f8 -->
@@ -90,5 +98,5 @@ Run `node scripts/check-docs.js`. Review behavior notes before refreshing marker
 <!-- docs-check: UnityProject/Assets/Scripts/GiftEffectManager.cs 0942227bdca28aaf68c44b975f59868d2547c679cb6a7d8fafcae17b45a1050a -->
 <!-- docs-check: UnityProject/Assets/Editor/CharacterTextureImporter.cs 4727945070f742451bd9c9619a46be647c7d35c8b3ecda607f471bf8e7b277d2 -->
 <!-- docs-check: UnityProject/Assets/Editor/CharacterMotionChecks.cs 79f35260b03698d1532944e0e3a29bf27e84e897655c9cc5ba352019b3122a96 -->
-<!-- docs-check: UnityProject/Assets/Editor/CharacterLibraryChecks.cs b34c38b4adcc4aeb4149461666de6ac0e8f0cdec72e6ca0ab462cf24f94cdaa4 -->
+<!-- docs-check: UnityProject/Assets/Editor/CharacterLibraryChecks.cs a1e3f955dff269f8848a360c36762c59391d156f4923fe69e762eb705003ee22 -->
 <!-- docs-check: UnityProject/Assets/Resources/Characters/club_cast.png 8e3e695c75c4abf259258df064a3aca6d9958ac89b306f54be8c7347f30dbe91 -->

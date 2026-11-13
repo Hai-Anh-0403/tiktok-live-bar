@@ -77,6 +77,12 @@ Người mới rơi từ phía trên về vị trí được phân: khoảng 10 
 
 Bốn vòi phụt lửa đồ họa vàng–cam đặt trên mép sàn sân khấu phía sau người biểu diễn: x=-5,-1.6,1.6,5; y=0.8; z=-5.6. Phụt theo đợt ngắn, tắt mềm, không phủ bảng Top hoặc che mặt. Tái sử dụng hệ hạt/shader có sẵn, không thêm đèn/âm thanh. Giới hạn một đợt mỗi 3 giây, tối đa bốn vòi cùng lúc và dọn hiệu ứng sau khoảng 2 giây. Game kích hoạt cùng luồng pháo hoa/Party hiện có, giữ nguyên pháo hoa và pháo lạnh. Preview có nút Phụt lửa riêng, cùng cơ chế giới hạn và Tạm dừng.
 
+## Viewer welcome and ranked wings
+
+Khách vào xem LIVE nhận dòng “Tên khách đã vào bar” chạy từ phải sang trái trong dải cao 40 px, cách mép trên 12 px của HUD tham chiếu. Nền dùng surface tối, viền cyan, chữ đậm 18 px; vùng chữ được cắt gọn và không đè hai thẻ quà/Top ở y=72. Dải ẩn khi không có khách mới. Mỗi lượt 8 giây, tối đa 8 lượt chờ và bỏ lượt chờ quá 24 giây để tránh lời chào trễ. Tên là văn bản thuần, giữ nguyên nội dung sau chuẩn hóa khoảng trắng; tái dùng giới hạn tên sẵn có của Bridge thay vì cắt thêm có thể tách emoji trên runtime Unity. Sự kiện vào xem không tự thay đổi điều kiện vào sàn.
+
+Ba hạng có cánh riêng từ bộ ảnh sẵn có: Top 1 lông vũ vàng/lửa (`wings-fire`), Top 2 pha lê bạc/cyan (`wings-ice`), Top 3 neon tím/hồng (`wings-neon`). Độ rộng giảm theo hạng, đập nhẹ theo nhịp sau lưng, không thêm đèn hoặc che tên/mặt. Hạng hiện tại quyết định cánh, kể cả lúc focus quà hoặc tổng quà lớn; đổi hạng chuyển theme ngay, rời Top trở về cánh quà thông thường. Preview giữ tối đa ba bộ cánh, gắn với người giữ hạng và có nút Khách vào để thử lời chào bằng dữ liệu mô phỏng.
+
 ## Do's and Don'ts
 
 - Giữ dữ liệu quà thật, cách tạo nhân vật, bảng Top và cấu hình TikFinity.

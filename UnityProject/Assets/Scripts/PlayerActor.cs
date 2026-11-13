@@ -356,7 +356,14 @@ namespace TikTokLiveGame
                 "fire" => -0.025f,
                 _ => -0.01f
             };
-            string wingsAsset = giftFocused ? "Banners/energy-wings-v2" : $"Banners/wings-{variant}";
+            // Rank wings take priority; banner/title variants keep their gift thresholds.
+            string wingsAsset = topRank switch
+            {
+                1 => "Banners/wings-fire",
+                2 => "Banners/wings-ice",
+                3 => "Banners/wings-neon",
+                _ => giftFocused ? "Banners/energy-wings-v2" : $"Banners/wings-{variant}"
+            };
             wingsRenderer.sprite = Resources.Load<Sprite>(wingsAsset) ?? Resources.Load<Sprite>("Banners/energy-wings-v2");
             bannerRenderer.sprite = Resources.Load<Sprite>($"Banners/title-{variant}");
             if (wingsRenderer.sprite != null)
@@ -364,7 +371,13 @@ namespace TikTokLiveGame
                 float width = wingsRenderer.sprite.bounds.size.x;
                 decorationScale = giftFocused ? Mathf.Max(0.55f, lineupScale) : lineupScale;
                 float characterHeight = Mathf.Max(0.1f, VisibleCharacterHeight(characterBaseScale.y * giftFocusScale));
-                float wingWidth = Mathf.Clamp(characterHeight * 1.28f, 0.72f, 2.8f);
+                float wingWidth = topRank switch
+                {
+                    1 => Mathf.Clamp(characterHeight * 1.65f, 2.55f, 2.8f),
+                    2 => Mathf.Clamp(characterHeight * 1.48f, 2.2f, 2.4f),
+                    3 => Mathf.Clamp(characterHeight * 1.3f, 1.85f, 2.05f),
+                    _ => Mathf.Clamp(characterHeight * 1.28f, 0.72f, 2.8f)
+                };
                 wingsRenderer.transform.localScale = Vector3.one * (width > 0f ? wingWidth / width : 1f);
             }
             decorationScale = giftFocused ? Mathf.Max(0.55f, lineupScale) : lineupScale;
@@ -397,8 +410,12 @@ namespace TikTokLiveGame
             if (wingsRenderer == null || bannerRenderer == null || wingAnchor == null || body == null || avatarRenderer == null || nameLabel == null || rankLabel == null || titleLabel == null || titleShadowLabel == null) return;
             float attachedBounce = bounce * 0.72f;
             float characterHeight = Mathf.Max(0.1f, VisibleCharacterHeight(characterBaseScale.y * giftFocusScale));
-            wingAnchor.localPosition = new Vector3(0f, body.localPosition.y + characterHeight * 0.16f, 0.12f);
+            // Rank wings attach from the feet; body groundOffset varies with the sprite pivot.
+            float wingY = topRank > 0 ? bounce + characterHeight * 0.55f : body.localPosition.y + characterHeight * 0.16f;
+            wingAnchor.localPosition = new Vector3(0f, wingY, 0.12f);
             wingAnchor.localRotation = body.localRotation;
+            float flutter = topRank > 0 ? Mathf.Sin(Time.time * 2.2f + phase) : 0f;
+            wingAnchor.localScale = new Vector3(1f + flutter * 0.025f, 1f + flutter * 0.012f, 1f);
             float identityScale = Mathf.Clamp(decorationScale, 0.72f, 0.88f);
             // Main camera nhìn từ +Z về -Z, nên toạ độ thế giới +X nằm ở bên TRÁI khung hình người xem.
             // Đặt avatar ở bên trái (+X) và tên người chơi ở bên phải (-X) để không đè lên avatar.
@@ -421,6 +438,7 @@ namespace TikTokLiveGame
             characterBaseScale = Vector3.one * CharacterScale() * GiftPowerScale() * lineupScale;
             body.localScale = characterBaseScale;
             Celebrate(1.2f);
+            if (topRank > 0) RefreshDecorations();
         }
 
         private float CharacterScale()

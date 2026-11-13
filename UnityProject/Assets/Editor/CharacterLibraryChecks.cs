@@ -10,6 +10,63 @@ namespace TikTokLiveGame.Editor
 {
     public static class CharacterLibraryChecks
     {
+        [MenuItem("TikTok Live Game/Verify Rank Wings")]
+        public static void VerifyRankWings()
+        {
+            UnityEngine.Random.State state = UnityEngine.Random.state;
+            GameObject actorObject = new("Rank Wing Check");
+            try
+            {
+                void Check(bool condition, string message)
+                {
+                    if (!condition) throw new InvalidOperationException(message);
+                }
+                PlayerActor actor = actorObject.AddComponent<PlayerActor>();
+                actor.Initialize(new TikTokPlayerData { userId = "demo-wing-check", nickname = "Wing Check" }, Vector3.zero, Color.white);
+                actor.SetCrowdSlot(Vector3.zero, 0.6f);
+                SpriteRenderer wings = (SpriteRenderer)typeof(PlayerActor).GetField("wingsRenderer", BindingFlags.NonPublic | BindingFlags.Instance).GetValue(actor);
+                SpriteRenderer character = (SpriteRenderer)typeof(PlayerActor).GetField("characterRenderer", BindingFlags.NonPublic | BindingFlags.Instance).GetValue(actor);
+                Sprite[] tiers = { Resources.Load<Sprite>("Banners/wings-fire"), Resources.Load<Sprite>("Banners/wings-ice"), Resources.Load<Sprite>("Banners/wings-neon") };
+                Check(tiers.All(sprite => sprite != null) && tiers.Distinct().Count() == 3, "Rank wings need three distinct fire/ice/neon sprites.");
+                Check(!wings.enabled, "An ordinary viewer must not start with wings.");
+                foreach (int gifts in new[] { 0, 10, 50, 200, 1000, 1000000 })
+                {
+                    actor.AddGiftPower(gifts - actor.GiftPower);
+                    foreach (bool focused in new[] { false, true })
+                    {
+                        actor.SetGiftFocus(focused);
+                        float previousWidth = float.PositiveInfinity;
+                        for (int rank = 1; rank <= 3; rank++)
+                        {
+                            actor.SetTopRank(rank);
+                            Check(wings.enabled && wings.sprite == tiers[rank - 1], $"Top {rank} wings changed with {gifts} gifts, focus={focused}.");
+                            float width = wings.sprite.bounds.size.x * wings.transform.localScale.x;
+                            Check(width > 0f && width <= 2.8001f && width < previousWidth, "Rank wing widths must stay bounded and decrease by tier.");
+                            Check(wings.sortingOrder < character.sortingOrder, "Wings must stay behind the character.");
+                            Check(Math.Abs(wings.color.a - character.color.a) < 0.0001f, "Wings must inherit character alpha.");
+                            previousWidth = width;
+                        }
+                    }
+                }
+                foreach (int rank in new[] { 3, 1, 2, 3, 2, 1 })
+                {
+                    actor.SetTopRank(rank);
+                    actor.ChangeCharacter();
+                    Check(wings.sprite == tiers[rank - 1], "Changing character must preserve rank wings.");
+                }
+                actor.SetTopRank(0);
+                Check(wings.enabled && wings.sprite == Resources.Load<Sprite>("Banners/energy-wings-v2"), "Demotion during gift focus must restore VIP energy wings.");
+                actor.SetGiftFocus(false);
+                Check(wings.enabled, "Demotion must preserve high-gift VIP wings.");
+                Debug.Log("Rank wing checks passed: distinct Top 1/2/3 sprites, gift/focus priority, bounded tier widths, sorting, alpha, swaps, character changes and VIP demotion.");
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(actorObject);
+                UnityEngine.Random.state = state;
+            }
+        }
+
         [MenuItem("TikTok Live Game/Verify Character Diversity")]
         public static void Verify()
         {
