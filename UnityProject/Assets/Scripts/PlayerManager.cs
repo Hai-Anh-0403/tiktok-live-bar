@@ -183,8 +183,9 @@ namespace TikTokLiveGame
             }
             else if (data.type == "gift")
             {
-                actor.AddGiftPower(data.diamondCount);
-                float duration = data.durationMs > 0 ? data.durationMs / 1000f : Mathf.Clamp(data.diamondCount, 3f, 7f);
+                int diamondsToAdd = data.deltaDiamondCount > 0 ? data.deltaDiamondCount : data.diamondCount;
+                actor.AddGiftPower(diamondsToAdd);
+                float duration = data.durationMs > 0 ? data.durationMs / 1000f : Mathf.Clamp(diamondsToAdd, 3f, 7f);
                 ApplyAction(actor, data, duration);
             }
             else if (data.type is "follow" or "share") actor.Celebrate();
@@ -253,7 +254,8 @@ namespace TikTokLiveGame
         {
             int count = playerOrder.Count;
             float scale = count <= 30 ? 0.65f : count <= 80 ? 0.56f : count <= 140 ? 0.46f : count <= 200 ? 0.38f : count <= 280 ? 0.32f : 0.27f;
-            const float xSpacing = 0.52f;
+            float spreadScale = count <= 12 ? 0.58f : count <= 35 ? 0.74f : count <= 80 ? 0.88f : 1f;
+            float xSpacing = 0.52f * spreadScale;
             const float frontEdge = 3.95f;
             const float backEdge = -2.45f;
             float zSpacing = (frontEdge - backEdge) / (CrowdRows - 1);
@@ -271,10 +273,11 @@ namespace TikTokLiveGame
                 float x = (column - (CrowdColumns - 1) * 0.5f) * xSpacing + stagger;
                 float z = frontEdge - row * zSpacing;
                 // Chua khoang trong o giua nua sau san nhay de khong che Nhan Vat Chinh tren san khau
-                if (z < 1.15f && Mathf.Abs(x) < 1.75f)
+                float centerClearance = 1.45f * spreadScale;
+                if (z < 0.85f && Mathf.Abs(x) < centerClearance)
                 {
                     float sign = x < 0f || (Mathf.Approximately(x, 0f) && row % 2 == 0) ? -1f : 1f;
-                    x = sign * (1.75f + Mathf.Abs(x) * 0.6f);
+                    x = sign * (centerClearance + Mathf.Abs(x) * 0.5f);
                 }
                 float depthRatio = row / (float)(CrowdRows - 1);
                 float perspectiveScale = scale * Mathf.Lerp(1.06f, 0.86f, depthRatio);

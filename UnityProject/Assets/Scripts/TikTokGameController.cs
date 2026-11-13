@@ -44,6 +44,8 @@ namespace TikTokLiveGame
         private Texture2D buttonHover;
         private Texture2D giftBoardBg;
         private Texture2D giftAccent;
+        private Texture2D scoreBadgeBg;
+        private Texture2D scoreBadgeBorder;
         private Texture2D coinIcon;
         private Texture2D[] giftIcons;
         private GUIStyle giftTitleStyle;
@@ -100,11 +102,12 @@ namespace TikTokLiveGame
             }
             else if (liveEvent.type == "gift")
             {
-                diamonds += liveEvent.diamondCount;
+                int diamondsToAdd = liveEvent.deltaDiamondCount > 0 ? liveEvent.deltaDiamondCount : liveEvent.diamondCount;
+                diamonds += diamondsToAdd;
                 donors.TryGetValue(liveEvent.userId, out Donor current);
-                donors[liveEvent.userId] = new Donor(liveEvent.userId, liveEvent.nickname, current.Score + liveEvent.diamondCount);
-                AddEnergy(liveEvent.diamondCount * 2f);
-                AddFeed($"{liveEvent.nickname} tặng {liveEvent.giftName} (+{liveEvent.diamondCount})", new Color(1f, 0.55f, 0.84f));
+                donors[liveEvent.userId] = new Donor(liveEvent.userId, liveEvent.nickname, current.Score + diamondsToAdd);
+                AddEnergy(diamondsToAdd * 2f);
+                AddFeed($"{liveEvent.nickname} tặng {liveEvent.giftName} (+{diamondsToAdd})", new Color(1f, 0.55f, 0.84f));
             }
             else if (liveEvent.type == "chat")
             {
@@ -321,6 +324,19 @@ namespace TikTokLiveGame
             DrawGiftRow(x, y + 199f, w, 5, "349+", "Lên Ngôi TOP DJ");
         }
 
+        private static void DrawShadowLabel(Rect rect, string text, GUIStyle style, Color color)
+        {
+            Color previous = GUI.color;
+            Color prevNormal = style.normal.textColor;
+            style.normal.textColor = Color.white;
+            GUI.color = new Color(0f, 0f, 0f, 0.92f);
+            GUI.Label(new Rect(rect.x + 1.2f, rect.y + 1.2f, rect.width, rect.height), text, style);
+            GUI.color = color;
+            GUI.Label(rect, text, style);
+            style.normal.textColor = prevNormal;
+            GUI.color = previous;
+        }
+
         private void DrawGiftRow(float x, float y, float w, int iconIndex, string cost, string effect)
         {
             Color old = GUI.color;
@@ -328,43 +344,51 @@ namespace TikTokLiveGame
             if (giftIcons != null && iconIndex >= 0 && iconIndex < giftIcons.Length && giftIcons[iconIndex] != null)
                 GUI.DrawTexture(new Rect(x + 14f, y, 25f, 25f), giftIcons[iconIndex], ScaleMode.ScaleToFit, true);
             if (coinIcon != null)
-                GUI.DrawTexture(new Rect(x + 48f, y + 5f, 15f, 15f), coinIcon, ScaleMode.ScaleToFit, true);
-            GUI.Label(new Rect(x + 66f, y + 2f, 44f, 22f), cost, giftCoinStyle);
-            GUI.Label(new Rect(x + 108f, y + 2f, w - 118f, 22f), effect, giftRowRightStyle);
+                GUI.DrawTexture(new Rect(x + 46f, y + 4f, 16f, 16f), coinIcon, ScaleMode.ScaleToFit, true);
+            DrawShadowLabel(new Rect(x + 65f, y + 1f, 48f, 24f), cost, giftCoinStyle, new Color(1f, 0.93f, 0.25f));
+            DrawShadowLabel(new Rect(x + 108f, y + 1f, w - 118f, 24f), effect, giftRowRightStyle, new Color(0.94f, 0.96f, 1f));
             GUI.color = old;
         }
 
         private void DrawCompactTopDonors(float width)
         {
             Donor[] top = donors.Values.OrderByDescending(donor => donor.Score).Take(3).ToArray();
-            const float w = 238f;
-            const float h = 132f;
+            const float w = 248f;
+            const float h = 140f;
             float x = width - w - 12f;
             const float y = 72f;
 
             GUI.DrawTexture(new Rect(x, y, w, h), giftBoardBg);
             GUI.DrawTexture(new Rect(x, y, w, 3.5f), giftAccent);
-            GUI.Label(new Rect(x + 12f, y + 8f, w - 24f, 24f), "TOP NGƯỜI ỦNG HỘ", giftTitleStyle);
+            DrawShadowLabel(new Rect(x + 12f, y + 8f, w - 24f, 24f), "TOP NGƯỜI ỦNG HỘ", giftTitleStyle, new Color(0.92f, 0.97f, 1f));
 
             if (top.Length == 0)
             {
-                GUI.Label(new Rect(x + 12f, y + 42f, w - 24f, 24f), "Chưa có quà trong phiên", giftRowLeftStyle);
-                GUI.Label(new Rect(x + 12f, y + 68f, w - 24f, 24f), "Cảm ơn anh em đã ghé chơi", giftSubStyle);
+                DrawShadowLabel(new Rect(x + 12f, y + 44f, w - 24f, 24f), "Chưa có quà trong phiên", giftRowLeftStyle, Color.white);
+                DrawShadowLabel(new Rect(x + 12f, y + 70f, w - 24f, 24f), "Cảm ơn anh em đã ghé chơi", giftSubStyle, new Color(0.38f, 0.98f, 0.86f));
                 return;
             }
 
             for (int index = 0; index < top.Length; index++)
             {
-                float rowY = y + 38f + index * 28f;
-                Color old = GUI.color;
-                GUI.color = index == 0 ? new Color(1f, 0.85f, 0.25f) : index == 1 ? new Color(0.55f, 0.92f, 1f) : new Color(1f, 0.62f, 0.38f);
-                string donorName = top[index].Name.Length > 15 ? top[index].Name[..14] + "…" : top[index].Name;
-                GUI.Label(new Rect(x + 12f, rowY, 142f, 24f), $"#{index + 1} {donorName}", giftRowLeftStyle);
-                GUI.color = Color.white;
+                float rowY = y + 38f + index * 31f;
+                Color rankColor = index == 0
+                    ? new Color(1f, 0.88f, 0.25f)
+                    : index == 1
+                        ? new Color(0.55f, 0.93f, 1f)
+                        : new Color(1f, 0.66f, 0.38f);
+                string donorName = top[index].Name.Length > 12 ? top[index].Name[..11] + "…" : top[index].Name;
+                DrawShadowLabel(new Rect(x + 10f, rowY, 134f, 25f), $"#{index + 1} {donorName}", giftRowLeftStyle, rankColor);
+
+                Rect badgeRect = new(x + w - 98f, rowY + 1f, 88f, 24f);
+                if (scoreBadgeBg != null) GUI.DrawTexture(badgeRect, scoreBadgeBg);
+                if (scoreBadgeBorder != null) GUI.DrawTexture(new Rect(badgeRect.x, badgeRect.y, badgeRect.width, 1.5f), scoreBadgeBorder);
                 if (coinIcon != null)
-                    GUI.DrawTexture(new Rect(x + w - 78f, rowY + 4f, 15f, 15f), coinIcon, ScaleMode.ScaleToFit, true);
-                GUI.Label(new Rect(x + w - 60f, rowY, 54f, 24f), top[index].Score.ToString(), giftCoinStyle);
-                GUI.color = old;
+                    GUI.DrawTexture(new Rect(badgeRect.x + 6f, badgeRect.y + 4f, 16f, 16f), coinIcon, ScaleMode.ScaleToFit, true);
+                string scoreText = top[index].Score >= 10000
+                    ? $"{top[index].Score:N0}"
+                    : $"{top[index].Score:N0} xu";
+                DrawShadowLabel(new Rect(badgeRect.x + 25f, badgeRect.y, badgeRect.width - 28f, 24f), scoreText, giftCoinStyle, new Color(1f, 0.95f, 0.28f));
             }
         }
 
@@ -510,8 +534,10 @@ namespace TikTokLiveGame
             Texture2D input = Solid(new Color(0.01f, 0.01f, 0.025f, 0.98f));
             energyBack = Solid(new Color(0.05f, 0.05f, 0.12f, 0.95f));
             energyFill = Solid(new Color(0.1f, 0.9f, 1f, 1f));
-            giftBoardBg = Solid(new Color(0.025f, 0.043f, 0.082f, 0.93f));
+            giftBoardBg = Solid(new Color(0.016f, 0.03f, 0.062f, 0.96f));
             giftAccent = Solid(new Color(0.26f, 0.91f, 0.88f, 0.95f));
+            scoreBadgeBg = Solid(new Color(0.20f, 0.14f, 0.02f, 0.95f));
+            scoreBadgeBorder = Solid(new Color(1f, 0.84f, 0.22f, 0.88f));
             coinIcon = CreateCoinIcon();
             giftIcons = LoadGiftIcons();
             panelStyle = new GUIStyle(GUI.skin.box) { normal = { background = panel }, border = new RectOffset(8, 8, 8, 8) };
@@ -522,9 +548,9 @@ namespace TikTokLiveGame
             giftTitleStyle = new GUIStyle(GUI.skin.label) { fontSize = 15, fontStyle = FontStyle.Bold, normal = { textColor = new Color(0.9f, 0.96f, 1f) } };
             welcomeStyle = new GUIStyle(giftTitleStyle) { fontSize = 18, richText = false, wordWrap = false, clipping = TextClipping.Clip, alignment = TextAnchor.MiddleLeft, padding = new RectOffset(0, 0, 0, 0) };
             giftSubStyle = new GUIStyle(GUI.skin.label) { fontSize = 13, fontStyle = FontStyle.Bold, normal = { textColor = new Color(0.38f, 0.98f, 0.86f) } };
-            giftRowLeftStyle = new GUIStyle(GUI.skin.label) { fontSize = 13, fontStyle = FontStyle.Bold, clipping = TextClipping.Clip, normal = { textColor = Color.white } };
-            giftCoinStyle = new GUIStyle(GUI.skin.label) { fontSize = 13, fontStyle = FontStyle.Bold, normal = { textColor = new Color(1f, 0.88f, 0.25f) } };
-            giftRowRightStyle = new GUIStyle(GUI.skin.label) { fontSize = 13, alignment = TextAnchor.MiddleRight, normal = { textColor = new Color(0.92f, 0.94f, 1f) } };
+            giftRowLeftStyle = new GUIStyle(GUI.skin.label) { fontSize = 14, fontStyle = FontStyle.Bold, alignment = TextAnchor.MiddleLeft, clipping = TextClipping.Clip, normal = { textColor = Color.white } };
+            giftCoinStyle = new GUIStyle(GUI.skin.label) { fontSize = 15, fontStyle = FontStyle.Bold, alignment = TextAnchor.MiddleLeft, normal = { textColor = new Color(1f, 0.92f, 0.25f) } };
+            giftRowRightStyle = new GUIStyle(GUI.skin.label) { fontSize = 13, fontStyle = FontStyle.Bold, alignment = TextAnchor.MiddleRight, normal = { textColor = new Color(0.92f, 0.94f, 1f) } };
             buttonStyle = new GUIStyle(GUI.skin.button) { fontSize = 15, fontStyle = FontStyle.Bold, normal = { background = button, textColor = Color.white }, hover = { background = buttonHover, textColor = Color.white }, active = { background = buttonHover, textColor = Color.white } };
             inputStyle = new GUIStyle(GUI.skin.textField) { fontSize = 18, normal = { background = input, textColor = Color.white }, padding = new RectOffset(12, 8, 8, 6) };
             bannerStyle = new GUIStyle(panelStyle)

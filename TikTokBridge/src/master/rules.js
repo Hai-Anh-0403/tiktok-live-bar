@@ -60,8 +60,12 @@ function resolveMasterRule(config, event) {
 
 function applyRule(event, rule) {
     if (!rule) return { ...event };
+    const repeats = Math.max(1, Number(event.repeatCount) || 1);
+    const currentDiamonds = Number(event.diamondCount) || 0;
+    const fallbackDiamonds = rule.source === 'gift' && rule.displayDiamonds > 0 ? rule.displayDiamonds * repeats : 0;
     return {
         ...event,
+        diamondCount: currentDiamonds > 0 ? currentDiamonds : fallbackDiamonds,
         action: rule.action,
         durationMs: rule.durationMs,
         label: rule.label,

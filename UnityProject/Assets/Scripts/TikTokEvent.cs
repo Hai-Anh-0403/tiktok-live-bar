@@ -23,6 +23,7 @@ namespace TikTokLiveGame
         public string titleVariant;
         public int repeatCount;
         public int diamondCount;
+        public int deltaDiamondCount;
         public int likeCount;
         public int score;
         public int giftPower;

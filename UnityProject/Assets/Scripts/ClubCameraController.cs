@@ -6,9 +6,9 @@ namespace TikTokLiveGame
     [RequireComponent(typeof(Camera))]
     public sealed class ClubCameraController : MonoBehaviour
     {
-        private readonly Vector3 defaultPosition = new(0f, 9.2f, 17.2f);
-        private readonly Vector3 focusWideBasePosition = new(0f, 7.2f, 14.2f);
-        private readonly Vector3 defaultLookAt = new(0f, 1.25f, -1.2f);
+        private readonly Vector3 defaultPosition = new(0f, 7.6f, 14.2f);
+        private readonly Vector3 focusWideBasePosition = new(0f, 6.4f, 12.4f);
+        private readonly Vector3 defaultLookAt = new(0f, 1.2f, -1.2f);
         private Transform focusTarget;
         private PlayerActor focusActor;
         private float focusUntil;
@@ -144,40 +144,40 @@ namespace TikTokLiveGame
                     if (playerManager == null) playerManager = FindFirstObjectByType<PlayerManager>();
                     if (playerManager != null && playerManager.TryGetCrowdBounds(out Bounds liveCrowdBounds))
                         crowdBounds = liveCrowdBounds;
-                    desiredPosition = new Vector3(crowdBounds.center.x, 10.5f, crowdBounds.max.z + 13.5f);
+                    desiredPosition = new Vector3(crowdBounds.center.x, 8.2f, crowdBounds.max.z + 10.2f);
                     desiredLookAt = crowdBounds.center + Vector3.up * 1.1f;
-                    desiredFov = 50f;
+                    desiredFov = 47f;
                 }
                 else
                 {
-                Vector3 target = (focusActor != null ? focusActor.FocusPosition : focusTarget.position) + Vector3.up * 1.1f;
+                Vector3 focusPos = focusActor != null ? focusActor.FocusPosition : focusTarget.position;
+                Vector3 target = focusPos + Vector3.up * 0.88f;
                 if (focusFireworks)
                 {
                     float elapsed = Time.time - focusStartedAt;
                     float reveal = Smooth(Mathf.InverseLerp(1.15f, 2.05f, elapsed));
-                    Vector3 closePosition = target + new Vector3(0f, 3.2f, 7.25f);
-                    Vector3 widePosition = new(target.x * 0.15f, 8.05f, 17.1f);
-                    Vector3 closeLookAt = target + Vector3.up * 0.35f;
-                    Vector3 wideLookAt = new(target.x * 0.24f, 3.15f, -2.25f);
+                    Vector3 closePosition = focusPos + new Vector3(0f, 2.1f, 6.2f);
+                    Vector3 widePosition = new(focusPos.x * 0.15f, 6.8f, 14.0f);
+                    Vector3 closeLookAt = target;
+                    Vector3 wideLookAt = new(focusPos.x * 0.24f, 1.8f, -2.0f);
                     desiredPosition = Vector3.Lerp(closePosition, widePosition, reveal);
                     desiredLookAt = Vector3.Lerp(closeLookAt, wideLookAt, reveal);
-                    desiredFov = Mathf.Lerp(34f, 54f, reveal);
+                    desiredFov = Mathf.Lerp(34f, 48f, reveal);
                 }
                 else if (focusWide)
                 {
-                    // Move closer and follow only part of the target's motion.
-                    // The gift sender stays prominent while visibly crossing the stage.
-                    desiredPosition = focusWideBasePosition + new Vector3(target.x * 0.55f, 0.05f, -2.2f);
-                    desiredLookAt = Vector3.Lerp(defaultLookAt, target + Vector3.up * 0.2f, 0.78f);
-                    desiredFov = 34f;
+                    // Keep the gift sender centered while visibly crossing the stage.
+                    desiredPosition = focusPos + new Vector3(0f, 2.55f, 7.4f);
+                    desiredLookAt = target;
+                    desiredFov = 35f;
                 }
                 else
                 {
-                    desiredPosition = target + (focusVip
-                        ? new Vector3(0f, 3f, 6.4f)
-                        : new Vector3(0f, 3.25f, 7.2f));
-                    desiredLookAt = target + Vector3.up * 0.35f;
-                    desiredFov = focusVip ? 31f : 34f;
+                    desiredPosition = focusPos + (focusVip
+                        ? new Vector3(0f, 1.95f, 5.8f)
+                        : new Vector3(0f, 2.1f, 6.3f));
+                    desiredLookAt = target;
+                    desiredFov = focusVip ? 33f : 35f;
                 }
                 }
             }
@@ -230,7 +230,6 @@ namespace TikTokLiveGame
                 if (playerManager != null && playerManager.TryGetCrowdBounds(out Bounds liveCrowdBounds))
                     crowdBounds = liveCrowdBounds;
                 ConfigureDirectorShot(directorShot, directorCycle, progress, crowdBounds, ref desiredPosition, ref desiredLookAt, ref desiredFov);
-                FitDirectorShot(directorShot, crowdBounds, GetComponent<Camera>().aspect, ref desiredPosition, desiredLookAt, desiredFov);
                 float shotBlend = Smooth(Mathf.Clamp01((beat - directorBlendStartBeat) / 2f));
                 desiredPosition = Vector3.Lerp(directorBlendPosition, desiredPosition, shotBlend);
                 desiredLookAt = Vector3.Lerp(directorBlendLookAt, desiredLookAt, shotBlend);
@@ -239,16 +238,19 @@ namespace TikTokLiveGame
                 // No handheld shake in comfort mode. The dancers and lights
                 // already provide enough motion for a lively frame.
             }
-            float responsiveness = focusing ? 3.8f : 2.25f;
-            float blend = 1f - Mathf.Exp(-responsiveness * Time.deltaTime);
-            transform.position = Vector3.Lerp(transform.position, desiredPosition, blend);
-            currentLookAt = Vector3.Lerp(currentLookAt, desiredLookAt, blend);
+            float posResponsiveness = focusing ? 6.0f : 2.25f;
+            float lookResponsiveness = focusing ? 9.5f : 2.5f;
+            float posBlend = 1f - Mathf.Exp(-posResponsiveness * Time.deltaTime);
+            float lookBlend = 1f - Mathf.Exp(-lookResponsiveness * Time.deltaTime);
+            transform.position = Vector3.Lerp(transform.position, desiredPosition, posBlend);
+            currentLookAt = Vector3.Lerp(currentLookAt, desiredLookAt, lookBlend);
             Quaternion targetRotation = Quaternion.LookRotation(currentLookAt - transform.position) *
                 Quaternion.Euler(handheldPitch, handheldYaw, handheldRoll);
-            transform.rotation = Quaternion.Slerp(transform.rotation, targetRotation, blend);
-            if (!focusing) transform.rotation = Quaternion.LookRotation(transform.rotation * Vector3.forward);
+            transform.rotation = focusing
+                ? targetRotation
+                : Quaternion.LookRotation(Quaternion.Slerp(transform.rotation, targetRotation, posBlend) * Vector3.forward);
             Camera camera = GetComponent<Camera>();
-            camera.fieldOfView = Mathf.Lerp(camera.fieldOfView, desiredFov, blend);
+            camera.fieldOfView = Mathf.Lerp(camera.fieldOfView, desiredFov, posBlend);
             ClubSceneBuilder.EnsureBackdropContains(camera);
         }
 
@@ -331,88 +333,88 @@ namespace TikTokLiveGame
             float mirroredSweepX = centerX * 2f - sweepX;
             float gentleSweepX = Mathf.Lerp(centerX, sweepX, 0.62f);
             float gentleMirroredSweepX = Mathf.Lerp(centerX, mirroredSweepX, 0.62f);
-            float cameraFront = front + 9.5f;
+            float cameraFront = Mathf.Max(front + 8.2f, 11.0f);
             switch (shot)
             {
                 case 0: // Establish the entire dance floor before scanning rows.
-                    position = Vector3.Lerp(new Vector3(0f, 9.4f, cameraFront + 2.2f), new Vector3(0f, 8.7f, cameraFront + 1.2f), t);
-                    lookAt = new Vector3(0f, 0.95f, middle - 0.25f);
-                    fov = Mathf.Lerp(54f, 50f, t);
+                    position = Vector3.Lerp(new Vector3(0f, 7.8f, cameraFront + 1.4f), new Vector3(0f, 7.2f, cameraFront + 0.6f), t);
+                    lookAt = new Vector3(0f, 1.05f, middle - 0.2f);
+                    fov = Mathf.Lerp(50f, 47f, t);
                     break;
                 case 1: // Sweep every dancer across the front rows.
-                    position = new Vector3(gentleSweepX * 0.58f, 5.1f, cameraFront - 0.25f);
-                    lookAt = new Vector3(gentleSweepX, 1.15f, Mathf.Lerp(front, middle, 0.2f));
-                    fov = 43f;
+                    position = new Vector3(gentleSweepX * 0.58f, 4.8f, cameraFront - 0.3f);
+                    lookAt = new Vector3(gentleSweepX * 0.85f, 1.15f, Mathf.Lerp(front, middle, 0.2f));
+                    fov = 42f;
                     break;
                 case 2: // Sweep the middle rows from the opposite direction.
-                    position = new Vector3(gentleMirroredSweepX * 0.56f, 5.8f, cameraFront + 0.2f);
-                    lookAt = new Vector3(gentleMirroredSweepX, 1.1f, middle);
-                    fov = 44f;
+                    position = new Vector3(gentleMirroredSweepX * 0.56f, 5.4f, cameraFront + 0.1f);
+                    lookAt = new Vector3(gentleMirroredSweepX * 0.85f, 1.1f, middle);
+                    fov = 43f;
                     break;
                 case 3: // Higher scan dedicated to dancers in the back rows.
-                    position = new Vector3(gentleSweepX * 0.46f, 7.5f, cameraFront + 1.1f);
-                    lookAt = new Vector3(gentleSweepX, 1.05f, back + 0.35f);
-                    fov = 45f;
+                    position = new Vector3(gentleSweepX * 0.46f, 6.6f, cameraFront + 0.8f);
+                    lookAt = new Vector3(gentleSweepX * 0.85f, 1.05f, back + 0.35f);
+                    fov = 44f;
                     break;
                 case 4: // Track across the fixed Top 1-2-3 lineup, not the DJ.
                     position = Vector3.Lerp(
-                        new Vector3(-1.025f - side * 2.4f, 4.85f, 6.15f),
-                        new Vector3(-1.025f + side * 2.4f, 4.55f, 5.25f), t);
-                    lookAt = new Vector3(-1.025f, 2.05f, -4.15f);
+                        new Vector3(-1.025f - side * 2.2f, 4.6f, 5.8f),
+                        new Vector3(-1.025f + side * 2.2f, 4.35f, 5.0f), t);
+                    lookAt = new Vector3(-1.025f, 1.85f, -4.15f);
                     fov = Mathf.Lerp(43f, 40f, t);
                     break;
                 case 5: // Gentle same-side dolly; never crosses the whole floor.
                     position = Vector3.Lerp(
-                        new Vector3(centerX + side * (halfWidth + 1.8f), 5.8f, front + 9.1f),
-                        new Vector3(centerX + side * (halfWidth * 0.58f + 1.5f), 6.3f, front + 10.1f),
+                        new Vector3(centerX + side * (halfWidth * 0.75f + 1.4f), 5.4f, cameraFront),
+                        new Vector3(centerX + side * (halfWidth * 0.5f + 1.2f), 5.8f, cameraFront + 0.8f),
                         t);
                     lookAt = new Vector3(
                         centerX + side * Mathf.Lerp(halfWidth * 0.24f, -halfWidth * 0.12f, t),
                         1.2f,
                         middle);
-                    fov = Mathf.Lerp(47f, 45f, t);
+                    fov = Mathf.Lerp(45f, 43f, t);
                     break;
                 case 6: // Title Reveal shot: Camera lowers and tilts up to show the background text
                     position = Vector3.Lerp(
-                        new Vector3(centerX, 5.5f, cameraFront + 1.0f),
-                        new Vector3(centerX + side * 1.2f, 3.5f, cameraFront - 1.5f),
+                        new Vector3(centerX, 5.2f, cameraFront + 0.8f),
+                        new Vector3(centerX + side * 1.1f, 3.5f, cameraFront - 1.2f),
                         t);
                     lookAt = Vector3.Lerp(
-                        new Vector3(centerX, 1.5f, middle),
-                        new Vector3(centerX - side * 0.5f, 1.5f, -12.5f), // Giữ nguyên trục Y, không ngước lên để tránh vượt trần
+                        new Vector3(centerX, 1.4f, middle),
+                        new Vector3(centerX - side * 0.45f, 1.45f, -11.5f),
                         t);
-                    fov = Mathf.Lerp(46f, 48f, t); // Giảm FOV để khung hình tập trung hơn, không bị lòi mép đen
+                    fov = Mathf.Lerp(45f, 47f, t);
                     break;
                 case 7: // Finish the crowd pass on the opposite half.
                     position = Vector3.Lerp(
-                        new Vector3(centerX - side * (halfWidth + 0.8f), 5.15f, front + 8.4f),
-                        new Vector3(centerX - side * 1.8f, 4.75f, front + 7.4f),
+                        new Vector3(centerX - side * (halfWidth * 0.75f + 0.8f), 4.9f, cameraFront - 0.4f),
+                        new Vector3(centerX - side * 1.6f, 4.5f, cameraFront - 1.1f),
                         t);
-                    lookAt = new Vector3(centerX - side * Mathf.Max(1.2f, halfWidth * 0.42f), 1.3f, middle + 0.35f);
-                    fov = Mathf.Lerp(46f, 42f, t);
+                    lookAt = new Vector3(centerX - side * Mathf.Max(1.1f, halfWidth * 0.4f), 1.25f, middle + 0.35f);
+                    fov = Mathf.Lerp(44f, 41f, t);
                     break;
                 case 8: // Push toward the main performer with the DJ booth behind her.
-                    position = Vector3.Lerp(new Vector3(-side * 0.9f, 5.4f, 20.8f), new Vector3(side * 0.6f, 4.7f, 12.8f), t);
-                    lookAt = new Vector3(0f, 3.3f, -4.1f);
-                    fov = Mathf.Lerp(44f, 40f, t);
+                    position = Vector3.Lerp(new Vector3(-side * 0.85f, 5.1f, 13.5f), new Vector3(side * 0.55f, 4.5f, 9.2f), t);
+                    lookAt = new Vector3(0f, 2.35f, -4.1f);
+                    fov = Mathf.Lerp(43f, 40f, t);
                     break;
                 case 9: // A shallow arc keeps all three ranked dancers and wings together.
                     float angle = Mathf.Lerp(-14f, 14f, t) * side * Mathf.Deg2Rad;
-                    position = new Vector3(-1.025f + Mathf.Sin(angle) * 12f, 5.8f, -4.15f + Mathf.Cos(angle) * 12f);
-                    lookAt = new Vector3(-1.025f, 2.05f, -4.15f);
+                    position = new Vector3(-1.025f + Mathf.Sin(angle) * 10.4f, 5.2f, -4.15f + Mathf.Cos(angle) * 10.4f);
+                    lookAt = new Vector3(-1.025f, 1.85f, -4.15f);
                     fov = 43f;
                     break;
                 case 10: // Rise and pull back to reveal the complete stage.
-                    position = Vector3.Lerp(new Vector3(side * 1.4f, 5.8f, 11.2f), new Vector3(-side * 1.2f, 10.2f, 14.2f), t);
-                    lookAt = Vector3.Lerp(new Vector3(0f, 2.4f, -4.4f), new Vector3(0f, 3.1f, -5.6f), t);
-                    fov = Mathf.Lerp(46f, 50f, t);
+                    position = Vector3.Lerp(new Vector3(side * 1.2f, 5.4f, 9.8f), new Vector3(-side * 1.0f, 8.2f, 12.2f), t);
+                    lookAt = Vector3.Lerp(new Vector3(0f, 1.8f, -4.2f), new Vector3(0f, 2.1f, -5.0f), t);
+                    fov = Mathf.Lerp(45f, 48f, t);
                     break;
                 case 11: // Opposite-side truck with a small orbit toward the stage.
                     position = Vector3.Lerp(
-                        new Vector3(centerX - side * (halfWidth + 2.2f), 6.4f, front + 10.8f),
-                        new Vector3(centerX - side * (halfWidth * 0.65f + 1.8f), 7.1f, front + 9.6f), t);
-                    lookAt = Vector3.Lerp(new Vector3(centerX - side * 0.8f, 1.6f, middle), new Vector3(-side * 0.5f, 2.2f, -4.15f), t);
-                    fov = Mathf.Lerp(45f, 43f, t);
+                        new Vector3(centerX - side * (halfWidth * 0.75f + 1.8f), 5.8f, cameraFront + 1.0f),
+                        new Vector3(centerX - side * (halfWidth * 0.55f + 1.4f), 6.4f, cameraFront + 0.2f), t);
+                    lookAt = Vector3.Lerp(new Vector3(centerX - side * 0.75f, 1.45f, middle), new Vector3(-side * 0.45f, 1.85f, -4.15f), t);
+                    fov = Mathf.Lerp(44f, 42f, t);
                     break;
             }
         }

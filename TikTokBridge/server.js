@@ -70,6 +70,7 @@ let connectionStatus = {
 let metrics = createMetrics();
 let masterConfig = sanitizeMasterConfig(initialMasterConfig);
 const recentEventIds = new Map();
+const activeGiftStreaks = new Map();
 const sessionPlayers = new Map();
 const sessionVipScores = new Map();
 const observedGifts = new Map((Array.isArray(initialObservedGifts) ? initialObservedGifts : [])
@@ -435,6 +436,7 @@ function resetSessionState(source = metrics.source) {
     sessionPlayers.clear();
     sessionVipScores.clear();
     recentEventIds.clear();
+    activeGiftStreaks.clear();
 }
 
 function createSnapshot() {
@@ -527,6 +529,27 @@ function emitGameEvent(event) {
     const now = Date.now();
     let giftRule = null;
     if (event.type === 'gift') {
+        // Xử lý chống cộng dồn đè số xu khi TikTok/TikFinity gửi chuỗi combo (streak)
+        const streakKey = `${event.userId || ''}:${event.giftId || event.giftName || ''}`;
+        const currentTotalDiamonds = Number(event.diamondCount) || 0;
+        const currentRepeatCount = Math.max(1, Number(event.repeatCount) || 1);
+        let deltaDiamonds = currentTotalDiamonds;
+
+        if (event.repeatEnd === false) {
+            // Đang trong chuỗi combo: chỉ cộng phần xu tăng thêm so với lần trước
+            const lastTotal = activeGiftStreaks.get(streakKey) || 0;
+            deltaDiamonds = Math.max(0, currentTotalDiamonds - lastTotal);
+            activeGiftStreaks.set(streakKey, currentTotalDiamonds);
+        } else {
+            // Kết thúc combo hoặc quà đơn lẻ
+            if (activeGiftStreaks.has(streakKey)) {
+                const lastTotal = activeGiftStreaks.get(streakKey) || 0;
+                deltaDiamonds = Math.max(0, currentTotalDiamonds - lastTotal);
+                activeGiftStreaks.delete(streakKey);
+            }
+        }
+        event.deltaDiamondCount = deltaDiamonds;
+
         giftRule = event.masterRuleId ? null : resolveGiftRule(event);
         if (giftRule) {
             event.action = giftRule.action;
@@ -549,7 +572,7 @@ function emitGameEvent(event) {
         if (event.type === 'gift') {
             playerState.giftPower =
                 Math.max(0, Number(previous.giftPower) || 0) +
-                Math.max(0, Number(event.diamondCount) || 0);
+                Math.max(0, Number(event.deltaDiamondCount !== undefined ? event.deltaDiamondCount : event.diamondCount) || 0);
             if (event.action === 'medal') {
                 playerState.titleLabel = event.label;
                 playerState.titleVariant = event.variant || 'fire';
@@ -563,8 +586,9 @@ function emitGameEvent(event) {
     if (event.type === 'member') metrics.members += 1;
     if (event.type === 'chat') metrics.chats += 1;
     if (event.type === 'gift') {
+        const diamondsToAdd = Math.max(0, Number(event.deltaDiamondCount !== undefined ? event.deltaDiamondCount : event.diamondCount) || 0);
         metrics.gifts += 1;
-        metrics.diamonds += event.diamondCount;
+        metrics.diamonds += diamondsToAdd;
         const vip = sessionVipScores.get(event.userId) || {
             userId: event.userId,
             nickname: event.nickname,
@@ -573,7 +597,7 @@ function emitGameEvent(event) {
         };
         vip.nickname = nonEmpty(event.nickname, vip.nickname || 'TikTok user');
         vip.avatar = nonEmpty(event.avatar, vip.avatar || '');
-        vip.score += event.diamondCount;
+        vip.score += diamondsToAdd;
         sessionVipScores.set(event.userId, vip);
     }
     if (event.type === 'like') metrics.likes += event.likeCount;

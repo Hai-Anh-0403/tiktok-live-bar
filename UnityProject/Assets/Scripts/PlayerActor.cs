@@ -13,6 +13,7 @@ namespace TikTokLiveGame
         private SpriteRenderer bannerRenderer;
         private Transform wingAnchor;
         private TextMesh nameLabel;
+        private TextMesh nameShadowLabel;
         private TextMesh rankLabel;
         private TextMesh titleLabel;
         private TextMesh titleShadowLabel;
@@ -68,7 +69,7 @@ namespace TikTokLiveGame
         {
             UserId = data.userId;
             Nickname = string.IsNullOrWhiteSpace(data.nickname) ? data.uniqueId : data.nickname;
-            GiftPower = Mathf.Max(0, data.giftPower);
+            GiftPower = Mathf.Max(0, Mathf.Max(data.giftPower, data.score));
             home = normalHome = position;
             transform.position = position;
             spawnDropPending = true;
@@ -115,13 +116,28 @@ namespace TikTokLiveGame
             nameLabel.text = FormatDisplayName(Nickname);
             nameLabel.anchor = TextAnchor.MiddleLeft;
             nameLabel.alignment = TextAlignment.Left;
-            nameLabel.fontSize = 40;
-            nameLabel.characterSize = 0.032f;
+            nameLabel.fontSize = 68;
+            nameLabel.characterSize = 0.025f;
             nameLabel.fontStyle = FontStyle.Bold;
             nameLabel.color = Color.white;
             labelObject.GetComponent<MeshRenderer>().sortingOrder = characterRenderer.sortingOrder + 10;
 
-            rankLabel = CreateLabel("Rank", new Vector3(0f, 3.05f, 0f), 48, new Color(1f, 0.82f, 0.2f), characterRenderer.sortingOrder + 15);
+            GameObject labelShadowObject = new("Name Shadow");
+            labelShadowObject.transform.SetParent(transform, false);
+            labelShadowObject.transform.localPosition = new Vector3(0.19f, 2.08f, 0.005f);
+            nameShadowLabel = labelShadowObject.AddComponent<TextMesh>();
+            nameShadowLabel.text = nameLabel.text;
+            nameShadowLabel.anchor = TextAnchor.MiddleLeft;
+            nameShadowLabel.alignment = TextAlignment.Left;
+            nameShadowLabel.fontSize = 68;
+            nameShadowLabel.characterSize = 0.025f;
+            nameShadowLabel.fontStyle = FontStyle.Bold;
+            nameShadowLabel.color = new Color(0f, 0f, 0f, 0.94f);
+            labelShadowObject.GetComponent<MeshRenderer>().sortingOrder = characterRenderer.sortingOrder + 9;
+
+            rankLabel = CreateLabel("Rank", new Vector3(0f, 3.05f, 0f), 64, new Color(1f, 0.88f, 0.22f), characterRenderer.sortingOrder + 15);
+            rankLabel.characterSize = 0.023f;
+            rankLabel.fontStyle = FontStyle.Bold;
             rankLabel.gameObject.SetActive(false);
             titleLabel = CreateLabel("Title", new Vector3(0f, -0.25f, 0f), 36, new Color(0.3f, 0.95f, 1f), characterRenderer.sortingOrder + 14);
             titleLabel.characterSize = 0.04f;
@@ -165,7 +181,9 @@ namespace TikTokLiveGame
             if (!string.IsNullOrWhiteSpace(nextNickname) && nextNickname != Nickname)
             {
                 Nickname = nextNickname;
-                if (nameLabel != null) nameLabel.text = FormatDisplayName(Nickname);
+                string formattedName = FormatDisplayName(Nickname);
+                if (nameLabel != null) nameLabel.text = formattedName;
+                if (nameShadowLabel != null) nameShadowLabel.text = formattedName;
             }
             if (!UsesSyntheticAvatar) LoadAvatar(data.avatar);
         }
@@ -223,6 +241,8 @@ namespace TikTokLiveGame
         {
             GiftPower += Mathf.Max(0, diamonds);
             characterBaseScale = Vector3.one * CharacterScale() * GiftPowerScale() * lineupScale;
+            if (topRank > 0 && rankLabel != null)
+                rankLabel.text = GiftPower > 0 ? $"TOP {topRank} • {GiftPower:N0} XU" : $"TOP {topRank}";
             ApplyEvolution();
             Touch();
         }
@@ -281,7 +301,9 @@ namespace TikTokLiveGame
             topRank = Mathf.Clamp(rank, 0, 3);
             lineupScale = LineupScaleForRank();
             home = topRank > 0 ? RankPodiumPosition(topRank) : normalHome;
-            rankLabel.text = topRank > 0 ? $"TOP {topRank}" : string.Empty;
+            rankLabel.text = topRank > 0
+                ? (GiftPower > 0 ? $"TOP {topRank} • {GiftPower:N0} XU" : $"TOP {topRank}")
+                : string.Empty;
             rankLabel.gameObject.SetActive(topRank > 0);
             characterBaseScale = Vector3.one * CharacterScale() * GiftPowerScale() * lineupScale;
             RefreshBadgeVisibility();
@@ -336,6 +358,7 @@ namespace TikTokLiveGame
             // already makes badges smaller toward the back, so hiding them based
             // on crowdScale made rear-row players look anonymous.
             nameLabel.gameObject.SetActive(true);
+            if (nameShadowLabel != null) nameShadowLabel.gameObject.SetActive(true);
             if (avatarRenderer.sprite != null) avatarRenderer.enabled = true;
             if (titleLabel != null && !giftFocused && topRank == 0 && GiftPower < 10 && crowdScale < 0.56f) SetTitleVisible(false);
             else ApplyEvolution();
@@ -381,7 +404,7 @@ namespace TikTokLiveGame
                 wingsRenderer.transform.localScale = Vector3.one * (width > 0f ? wingWidth / width : 1f);
             }
             decorationScale = giftFocused ? Mathf.Max(0.55f, lineupScale) : lineupScale;
-            float identityScale = Mathf.Clamp(decorationScale, 0.72f, 0.88f);
+            float identityScale = Mathf.Clamp(decorationScale, 0.78f, 0.92f);
             int titleLen = titleLabel != null && titleLabel.text != null ? titleLabel.text.Length : 0;
             if (bannerRenderer.sprite != null)
             {
@@ -394,9 +417,10 @@ namespace TikTokLiveGame
                     1f);
             }
             float displayedCharacterHeight = Mathf.Max(0.1f, VisibleCharacterHeight(characterBaseScale.y * giftFocusScale));
-            decorationBadgeY = displayedCharacterHeight + 0.22f;
+            decorationBadgeY = displayedCharacterHeight * 0.78f;
             avatarRenderer.transform.localScale = avatarBaseScale * identityScale;
             nameLabel.transform.localScale = Vector3.one * identityScale;
+            if (nameShadowLabel != null) nameShadowLabel.transform.localScale = nameLabel.transform.localScale;
             float titleScale = titleLen <= 9 ? 0.68f : titleLen <= 14 ? 0.58f : titleLen <= 19 ? 0.48f : 0.41f;
             titleLabel.transform.localScale = Vector3.one * identityScale * titleScale;
             if (titleShadowLabel != null) titleShadowLabel.transform.localScale = titleLabel.transform.localScale;
@@ -416,18 +440,20 @@ namespace TikTokLiveGame
             wingAnchor.localRotation = body.localRotation;
             float flutter = topRank > 0 ? Mathf.Sin(Time.time * 2.2f + phase) : 0f;
             wingAnchor.localScale = new Vector3(1f + flutter * 0.025f, 1f + flutter * 0.012f, 1f);
-            float identityScale = Mathf.Clamp(decorationScale, 0.72f, 0.88f);
+            float identityScale = Mathf.Clamp(decorationScale, 0.78f, 0.92f);
             // Main camera nhìn từ +Z về -Z, nên toạ độ thế giới +X nằm ở bên TRÁI khung hình người xem.
             // Đặt avatar ở bên trái (+X) và tên người chơi ở bên phải (-X) để không đè lên avatar.
             float avatarCenterOffset = 0.52f * identityScale;
             avatarRenderer.transform.localPosition = new Vector3(avatarCenterOffset, decorationBadgeY + attachedBounce, -0.01f);
             nameLabel.transform.localPosition = new Vector3(avatarCenterOffset - 0.42f * identityScale, decorationBadgeY + attachedBounce, -0.02f);
-            float bannerY = decorationBadgeY + 0.58f * identityScale + attachedBounce;
+            if (nameShadowLabel != null)
+                nameShadowLabel.transform.localPosition = new Vector3(avatarCenterOffset - 0.436f * identityScale, decorationBadgeY + attachedBounce - 0.02f * identityScale, -0.015f);
+            float bannerY = decorationBadgeY + 0.28f * identityScale + attachedBounce;
             bannerRenderer.transform.localPosition = new Vector3(0f, bannerY, -0.01f);
             float titleY = bannerY + bannerTextOffsetY * identityScale;
             titleLabel.transform.localPosition = new Vector3(0f, titleY, -0.02f);
             titleShadowLabel.transform.localPosition = new Vector3(-0.014f * identityScale, titleY - 0.018f * identityScale, -0.015f);
-            rankLabel.transform.localPosition = new Vector3(0f, bannerY + 0.40f * identityScale, 0f);
+            rankLabel.transform.localPosition = new Vector3(0f, bannerY + 0.33f * identityScale, 0f);
         }
 
         public void ChangeCharacter()
@@ -658,6 +684,7 @@ namespace TikTokLiveGame
             if (camera != null)
             {
                 nameLabel.transform.rotation = camera.transform.rotation;
+                if (nameShadowLabel != null) nameShadowLabel.transform.rotation = camera.transform.rotation;
                 rankLabel.transform.rotation = camera.transform.rotation;
                 titleLabel.transform.rotation = camera.transform.rotation;
                 titleShadowLabel.transform.rotation = camera.transform.rotation;
@@ -665,18 +692,20 @@ namespace TikTokLiveGame
                 bannerRenderer.transform.rotation = camera.transform.rotation;
 
                 // Đồng bộ vị trí theo Camera.right để avatar ở bên trái và tên ở bên phải
-                float currentIdentityScale = Mathf.Clamp(decorationScale, 0.72f, 0.88f);
+                float currentIdentityScale = Mathf.Clamp(decorationScale, 0.78f, 0.92f);
                 Vector3 headCenter = transform.position + Vector3.up * (decorationBadgeY + bounce * 0.72f);
                 avatarRenderer.transform.position = headCenter - camera.transform.right * (0.35f * currentIdentityScale);
                 nameLabel.transform.position = headCenter + camera.transform.right * (0.05f * currentIdentityScale);
+                if (nameShadowLabel != null)
+                    nameShadowLabel.transform.position = nameLabel.transform.position - camera.transform.up * (0.02f * currentIdentityScale) + camera.transform.right * (0.014f * currentIdentityScale) + camera.transform.forward * 0.005f;
 
-                float bannerYOffset = 0.52f * currentIdentityScale;
+                float bannerYOffset = 0.28f * currentIdentityScale;
                 Vector3 bannerPos = headCenter + camera.transform.up * bannerYOffset;
                 bannerRenderer.transform.position = bannerPos;
                 titleLabel.transform.position = bannerPos + camera.transform.up * (bannerTextOffsetY * currentIdentityScale);
                 if (titleShadowLabel != null)
                     titleShadowLabel.transform.position = bannerPos + camera.transform.up * ((bannerTextOffsetY - 0.016f) * currentIdentityScale) - camera.transform.right * 0.012f;
-                rankLabel.transform.position = bannerPos + camera.transform.up * (0.36f * currentIdentityScale);
+                rankLabel.transform.position = bannerPos + camera.transform.up * (0.33f * currentIdentityScale);
             }
         }
 
@@ -710,6 +739,7 @@ namespace TikTokLiveGame
                 bannerRenderer.color = color;
             }
             SetTextAlpha(nameLabel, visualAlpha);
+            SetTextAlpha(nameShadowLabel, visualAlpha * 0.94f);
             SetTextAlpha(rankLabel, visualAlpha);
             SetTextAlpha(titleLabel, visualAlpha);
             SetTextAlpha(titleShadowLabel, visualAlpha * 0.92f);
