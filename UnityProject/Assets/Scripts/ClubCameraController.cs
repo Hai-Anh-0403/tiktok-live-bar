@@ -10,6 +10,7 @@ namespace TikTokLiveGame
         private readonly Vector3 focusWideBasePosition = new(0f, 7.2f, 14.2f);
         private readonly Vector3 defaultLookAt = new(0f, 1.25f, -1.2f);
         private Transform focusTarget;
+        private PlayerActor focusActor;
         private float focusUntil;
         private bool focusVip;
         private bool focusWide;
@@ -37,6 +38,7 @@ namespace TikTokLiveGame
         {
             if (actor == null) return;
             focusTarget = actor.transform;
+            focusActor = actor;
             focusUntil = Time.time + Mathf.Clamp(seconds, 2f, 12f);
             focusVip = vip;
             focusWide = wide;
@@ -50,6 +52,7 @@ namespace TikTokLiveGame
         {
             if (actor == null) return;
             focusTarget = actor.transform;
+            focusActor = actor;
             focusDuration = Mathf.Clamp(seconds, 5.5f, 8f);
             focusStartedAt = Time.time;
             focusUntil = focusStartedAt + focusDuration;
@@ -76,6 +79,7 @@ namespace TikTokLiveGame
         {
             if (request.Actor == null) return;
             focusTarget = request.Actor.transform;
+            focusActor = request.Actor;
             focusDuration = request.Seconds;
             focusStartedAt = Time.time;
             focusUntil = focusStartedAt + focusDuration;
@@ -88,6 +92,7 @@ namespace TikTokLiveGame
         private void StartCrowdWelcome()
         {
             focusTarget = null;
+            focusActor = null;
             focusDuration = 2.5f;
             focusStartedAt = Time.time;
             focusUntil = focusStartedAt + focusDuration;
@@ -137,7 +142,7 @@ namespace TikTokLiveGame
                 }
                 else
                 {
-                Vector3 target = focusTarget.position + Vector3.up * 1.1f;
+                Vector3 target = (focusActor != null ? focusActor.FocusPosition : focusTarget.position) + Vector3.up * 1.1f;
                 if (focusFireworks)
                 {
                     float elapsed = Time.time - focusStartedAt;

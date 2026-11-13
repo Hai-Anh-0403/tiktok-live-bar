@@ -186,8 +186,8 @@ namespace TikTokLiveGame
             }
             CreateOrientedCylinder("Main Character Plinth", new Vector3(0f, 0.35f, -4.1f), new Vector3(2.9f, 0.35f, 2.9f), Vector3.zero, deck);
             CreateOrientedCylinder("Main Character Plinth Rim", new Vector3(0f, 0.7f, -4.1f), new Vector3(2.94f, 0.015f, 2.94f), Vector3.zero, GameMaterials.Club(pink * 0.15f, pink * 0.55f));
-            CreateOrientedCylinder("VIP Third Podium", new Vector3(-3.75f, 0.15f, -2.75f), new Vector3(1.6f, 0.18f, 1.6f), Vector3.zero, deck);
-            CreateOrientedCylinder("VIP Third Podium Rim", new Vector3(-3.75f, 0.345f, -2.75f), new Vector3(1.63f, 0.015f, 1.63f), Vector3.zero, GameMaterials.Club(gold * 0.15f, gold * 0.45f));
+            CreateOrientedCylinder("VIP Third Podium", new Vector3(-4.6f, 0.25f, -4.15f), new Vector3(1.6f, 0.275f, 1.6f), Vector3.zero, deck);
+            CreateOrientedCylinder("VIP Third Podium Rim", new Vector3(-4.6f, 0.535f, -4.15f), new Vector3(1.63f, 0.015f, 1.63f), Vector3.zero, GameMaterials.Club(gold * 0.15f, gold * 0.45f));
         }
 
         private static void CreateRaisedStage()

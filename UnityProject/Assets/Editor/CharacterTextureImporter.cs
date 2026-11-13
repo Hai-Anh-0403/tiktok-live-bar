@@ -6,7 +6,7 @@ namespace TikTokLiveGame.Editor
 {
     public sealed class CharacterTextureImporter : AssetPostprocessor
     {
-        public override uint GetVersion() => 1;
+        public override uint GetVersion() => 2;
 
         private void OnPreprocessTexture()
         {
@@ -15,6 +15,7 @@ namespace TikTokLiveGame.Editor
             bool isStage = assetPath.StartsWith("Assets/Resources/Stage/");
             bool isNpcAvatar = assetPath.StartsWith("Assets/Resources/NpcAvatars/");
             if (!isCharacter && !isBanner && !isStage && !isNpcAvatar) return;
+            bool isCast = assetPath == "Assets/Resources/Characters/club_cast.png";
             TextureImporter importer = (TextureImporter)assetImporter;
             importer.textureType = TextureImporterType.Sprite;
             importer.spriteImportMode = SpriteImportMode.Single;
@@ -24,7 +25,8 @@ namespace TikTokLiveGame.Editor
             importer.filterMode = FilterMode.Bilinear;
             importer.wrapMode = TextureWrapMode.Clamp;
             importer.textureCompression = TextureImporterCompression.Uncompressed;
-            importer.maxTextureSize = isNpcAvatar ? 256 : isCharacter ? 512 : 2048;
+            importer.maxTextureSize = isCast ? 2048 : isNpcAvatar ? 256 : isCharacter ? 512 : 2048;
+            if (isCast) importer.npotScale = TextureImporterNPOTScale.None;
         }
     }
 }

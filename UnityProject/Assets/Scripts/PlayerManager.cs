@@ -51,9 +51,9 @@ namespace TikTokLiveGame
                 return false;
             }
 
-            bounds = new Bounds(first.transform.position, Vector3.zero);
+            bounds = new Bounds(first.FocusPosition, Vector3.zero);
             foreach (PlayerActor actor in players.Values)
-                if (actor != null) bounds.Encapsulate(actor.transform.position);
+                if (actor != null) bounds.Encapsulate(actor.FocusPosition);
             return true;
         }
 

@@ -1,3 +1,4 @@
+using System.Collections;
 using UnityEngine;
 
 namespace TikTokLiveGame
@@ -45,8 +46,11 @@ namespace TikTokLiveGame
         private bool spawnDropPending;
         private bool spawnDropping;
         private float spawnDropStartedAt;
+        private bool spawnLandingPlayed;
+        private static Material spawnGlowMaterial;
+        private static Mesh spawnGlowMesh;
 
-        private const float SpawnDropHeight = 6f;
+        private const float SpawnDropHeight = 10f;
         private const float SpawnDropDuration = 1.8f;
         private const float JumpHeight = 2f;
 
@@ -56,6 +60,7 @@ namespace TikTokLiveGame
         public float LastActiveTime { get; private set; }
         public bool IsTopRanked => topRank > 0;
         public bool IsNpc => !string.IsNullOrEmpty(UserId) && UserId.StartsWith("npc-");
+        public Vector3 FocusPosition => spawnDropPending || spawnDropping ? home : transform.position;
         private bool UsesSyntheticAvatar => !string.IsNullOrEmpty(UserId) &&
             (UserId.StartsWith("npc-") || UserId.StartsWith("demo-") || UserId == "master-test");
 
@@ -289,7 +294,7 @@ namespace TikTokLiveGame
             {
                 1 => new Vector3(-2.55f, 0.65f, -4.15f),
                 2 => new Vector3(2.55f, 0.65f, -4.15f),
-                3 => new Vector3(-3.75f, 0.35f, -2.75f),
+                3 => new Vector3(-4.6f, 0.55f, -4.15f),
                 _ => Vector3.zero
             };
         }
@@ -412,7 +417,7 @@ namespace TikTokLiveGame
         {
             (string nextName, Sprite[] frames) = CharacterLibrary.RandomCharacter(characterName);
             characterName = nextName;
-            flipbook.SetFrames(frames, nextName == "hanhan_video_dance" ? 15f : Random.Range(10f, 14f));
+            flipbook.SetFrames(frames, nextName == "hanhan_video_dance" ? 15f : nextName.StartsWith("club_") ? 6f : Random.Range(10f, 14f));
             characterBaseScale = Vector3.one * CharacterScale() * GiftPowerScale() * lineupScale;
             body.localScale = characterBaseScale;
             Celebrate(1.2f);
@@ -472,7 +477,49 @@ namespace TikTokLiveGame
 
         public void ReturnToAssignedSlot()
         {
+            if (spawnDropPending || spawnDropping) return;
             transform.position = home;
+        }
+
+        private static float SampleSpawnDropHeight(float progress)
+        {
+            progress = Mathf.Clamp01(progress);
+            if (progress < 0.72f)
+            {
+                float fall = progress / 0.72f;
+                return SpawnDropHeight * (1f - fall * fall * (3f - 2f * fall));
+            }
+            float bounce = (progress - 0.72f) / 0.28f;
+            return Mathf.Max(0f, Mathf.Sin(bounce * Mathf.PI) * 0.28f * (1f - bounce));
+        }
+
+        private IEnumerator PlaySpawnLandingGlow()
+        {
+            const float duration = 0.55f;
+            if (spawnGlowMaterial == null)
+            {
+                Shader shader = Resources.Load<Shader>("Shaders/SimpleParticle");
+                if (shader == null) shader = Shader.Find("Sprites/Default");
+                if (shader == null) yield break;
+                spawnGlowMaterial = new Material(shader) { renderQueue = 3080 };
+            }
+            if (spawnGlowMesh == null) spawnGlowMesh = DiscoBallRig.BuildQuadMesh();
+            Renderer glow = DiscoBallRig.CreateGlow(null, "Player Landing Glow", spawnGlowMesh,
+                spawnGlowMaterial, home + Vector3.up * 0.035f, 0.55f);
+            glow.transform.rotation = Quaternion.Euler(90f, 0f, 0f);
+            // Cleanup survives actor removal, which stops this coroutine.
+            Destroy(glow.gameObject, duration);
+            MaterialPropertyBlock block = new();
+            float startedAt = Time.time;
+            while (glow != null && Time.time - startedAt < duration)
+            {
+                float progress = Mathf.Clamp01((Time.time - startedAt) / duration);
+                float size = Mathf.Lerp(0.55f, 1.65f, Mathf.SmoothStep(0f, 1f, progress));
+                glow.transform.localScale = new Vector3(size, size, 1f);
+                block.SetColor("_Color", new Color(0.26f, 0.91f, 0.88f, 0.3f * (1f - progress) * (1f - progress)));
+                glow.SetPropertyBlock(block);
+                yield return null;
+            }
         }
 
         private void SetAction(ActionState next, float seconds)
@@ -485,21 +532,26 @@ namespace TikTokLiveGame
         private void Update()
         {
             if (Time.time >= actionUntil && action != ActionState.Idle) action = ActionState.Idle;
+            bool entering = spawnDropping;
+            float entryStretch = 0f;
             if (spawnDropping)
             {
                 float progress = Mathf.Clamp01((Time.time - spawnDropStartedAt) / SpawnDropDuration);
-                float heightOffset;
+                transform.position = home + Vector3.up * SampleSpawnDropHeight(progress);
                 if (progress < 0.72f)
                 {
-                    float fallProgress = progress / 0.72f;
-                    heightOffset = SpawnDropHeight * (1f - fallProgress * fallProgress);
+                    entryStretch = -0.04f * Mathf.Sin(progress / 0.72f * Mathf.PI);
                 }
                 else
                 {
-                    float bounceProgress = (progress - 0.72f) / 0.28f;
-                    heightOffset = Mathf.Sin(bounceProgress * Mathf.PI) * 0.28f * (1f - bounceProgress);
+                    float landing = (progress - 0.72f) / 0.28f;
+                    entryStretch = 0.12f * Mathf.Sin(landing * Mathf.PI * 2f) * (1f - landing) * (1f - landing);
+                    if (!spawnLandingPlayed)
+                    {
+                        spawnLandingPlayed = true;
+                        if (!IsNpc) StartCoroutine(PlaySpawnLandingGlow());
+                    }
                 }
-                transform.position = home + Vector3.up * heightOffset;
                 if (progress >= 1f)
                 {
                     spawnDropping = false;
@@ -557,7 +609,9 @@ namespace TikTokLiveGame
                 _ => 0.4f
             };
             motionIntensity = Mathf.Lerp(motionIntensity, targetMotion, 1f - Mathf.Exp(-6f * Time.deltaTime));
-            CharacterMotion.Pose pose = CharacterMotion.Sample(ClubBeatClock.Beat, phase, motionIntensity);
+            CharacterMotion.Pose pose = entering
+                ? new CharacterMotion.Pose(0f, 0f, 0f, 0f, entryStretch)
+                : CharacterMotion.Sample(ClubBeatClock.Beat, phase, motionIntensity);
             flipbook.SetPlaybackSpeed(Mathf.Lerp(1.05f, 1.7f, motionIntensity));
             float bounce = pose.Lift * lineupScale;
             body.localRotation = Quaternion.Euler(0f, pose.Yaw, pose.Lean);
@@ -674,6 +728,10 @@ namespace TikTokLiveGame
                 "mushroom_dance_01" => 0.038f,
                 "mushroom_dance_15" => 0.046f,
                 "mushroom_magic_02" => 0.021f,
+                "club_cat" => 0.041f,
+                "club_robot" => 0.064f,
+                "club_duck" => 0.032f,
+                "club_astronaut" => 0.048f,
                 _ => 0f
             };
         }

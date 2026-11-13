@@ -16,13 +16,17 @@ SCRIPTS = [
     for name in [
         "ClubSceneBuilder.cs", "ClubPulseController.cs", "FloorLightShow.cs",
         "StageExtras.cs", "TikTokGameController.cs", "PlayerActor.cs",
-        "RuntimeBootstrap.cs", "CharacterMotion.cs",
+        "RuntimeBootstrap.cs", "CharacterMotion.cs", "CharacterLibrary.cs", "ClubCameraController.cs", "PlayerManager.cs", "GiftEffectManager.cs",
     ]
 ] + [
     "UnityProject/Assets/Scripts/CharacterMotion.cs.meta",
     "UnityProject/Assets/Editor/CharacterTextureImporter.cs",
     "UnityProject/Assets/Editor/CharacterMotionChecks.cs",
     "UnityProject/Assets/Editor/CharacterMotionChecks.cs.meta",
+    "UnityProject/Assets/Editor/CharacterLibraryChecks.cs",
+    "UnityProject/Assets/Editor/CharacterLibraryChecks.cs.meta",
+    "UnityProject/Assets/Resources/Characters/club_cast.png",
+    "UnityProject/Assets/Resources/Characters/club_cast.png.meta",
 ]
 FILES = SCRIPTS + [
     "DESIGN.md", "SYSTEM_DOCUMENTATION.md", "Makefile", "LICENSE",
@@ -35,16 +39,16 @@ Base: Hai-Anh-0403/tiktok-live-bar @ eff8b3f132647ecc9e2929e388a7e9f7b542f762.
 
 1. Keep the running LIVE installation and executable intact. Use a development branch or separate complete repository with the same source base.
 2. Preferred: run `git apply --check nightclub-stage.patch` in that repository, then `git apply nightclub-stage.patch`. If the check fails, stop and compare the changes; do not force it.
-3. Alternatively, compare and copy only the included Unity scripts and their .meta files. Do not replace config, .env, TikTokBridge, media, or the entire UnityProject folder.
+3. Alternatively, compare and copy the included Unity scripts and their .meta files, plus the new Assets/Resources/Characters/club_cast.png atlas and its .meta. The atlas is required for the four new character families. Do not replace config, .env, TikTokBridge, personal media, or the entire UnityProject folder.
 4. DESIGN.md and SYSTEM_DOCUMENTATION.md describe the changes and verification limits. The scripts/Makefile files are optional source-package verification helpers.
-5. Open UnityProject with the Unity version in ProjectSettings/ProjectVersion.txt. Let the versioned character importer refresh textures, then run TikTok Live Game > Verify Character Motion before building with the existing build.bat. This development machine did not run Unity or produce a tested Windows executable.
-6. In the development build verify Rose creates a player and zooms; Top and other gifts update; music, GIF, camera, F1/F2/F3/F11 and chroma work. Test portrait/desktop and a busy crowd before replacing the live build.
+5. Open UnityProject with the Unity version in ProjectSettings/ProjectVersion.txt. Let the versioned character importer refresh textures, then run TikTok Live Game > Verify Character Motion and Verify Character Diversity before building with the existing build.bat. This development machine did not run Unity or produce a tested Windows executable.
+6. In the development build verify a new player falls from above, lands on the assigned floor/podium and emits one short ground pulse; repeated gifts do not restart entry and camera stays aimed at the floor during the fall. Check character changes, Top podium updates, all other gifts, music, GIF, camera, F1/F2/F3/F11 and chroma. Test portrait/desktop and a busy crowd before replacing the live build.
 
 The browser preview is a concept renderer with simulated data. It does not connect to TikTok and does not establish Windows rendering or FPS.
 
 The original 540 x 960 default is preserved. To request a larger render size, Unity's native command-line options are now honored, for example:
 OngChuMMO_Live.exe -screen-width 1080 -screen-height 1920 -screen-fullscreen 0
-Use a resolution suitable for the monitor and GPU. Source sprites remain 240-256 px (main GIF 416 x 380); this does not create missing HD art. Lossless character textures consume more GPU memory than compressed textures.
+Use a resolution suitable for the monitor and GPU. Original sprites remain 240-256 px (main GIF 416 x 380); new cast atlas cells are 313.5 px. Render resolution does not create missing art detail. Lossless character textures consume more GPU memory than compressed textures.
 """
 
 

@@ -8,6 +8,8 @@ namespace TikTokLiveGame
         private readonly System.Collections.Generic.Dictionary<string, ComboState> combos = new();
         private AudioSource fireworkAudio;
         private AudioClip fireworkClip;
+        private static Material flameMaterial;
+        private float nextFlameAt;
         public string BannerText { get; private set; } = string.Empty;
         public float BannerUntil { get; private set; }
 
@@ -73,6 +75,82 @@ namespace TikTokLiveGame
             PlayFireworkSound();
             StartCoroutine(FireworkSequence(burstCount));
             StartCoroutine(ColdFountainSequence());
+            PlayFlameJets();
+        }
+
+        public void PlayFlameJets()
+        {
+            if (Time.time < nextFlameAt) return;
+            if (flameMaterial == null)
+            {
+                Shader shader = Resources.Load<Shader>("Shaders/SimpleParticle");
+                if (shader == null) shader = Shader.Find("Sprites/Default");
+                if (shader == null) return;
+                flameMaterial = new Material(shader) { renderQueue = 3080 };
+            }
+            nextFlameAt = Time.time + 3f;
+
+            float[] xPositions = { -5f, -1.6f, 1.6f, 5f };
+            foreach (float x in xPositions)
+            {
+                GameObject jet = new("Stage Flame Jet");
+                jet.transform.position = new Vector3(x, 0.8f, -5.6f);
+                jet.transform.rotation = Quaternion.Euler(-90f, 0f, 0f);
+                ParticleSystem particles = jet.AddComponent<ParticleSystem>();
+                particles.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+                ParticleSystem.MainModule main = particles.main;
+                main.playOnAwake = false;
+                main.duration = 0.9f;
+                main.loop = false;
+                main.startLifetime = new ParticleSystem.MinMaxCurve(0.35f, 0.55f);
+                main.startSpeed = new ParticleSystem.MinMaxCurve(4.8f, 6.2f);
+                main.startSize = new ParticleSystem.MinMaxCurve(0.16f, 0.35f);
+                main.startColor = new ParticleSystem.MinMaxGradient(new Color(1f, 0.72f, 0.14f), new Color(1f, 0.35f, 0.04f));
+                main.gravityModifier = 0f;
+                main.simulationSpace = ParticleSystemSimulationSpace.World;
+                main.maxParticles = 160;
+
+                ParticleSystem.EmissionModule emission = particles.emission;
+                emission.enabled = true;
+                emission.rateOverTime = 140f;
+
+                ParticleSystem.ShapeModule shape = particles.shape;
+                shape.enabled = true;
+                shape.shapeType = ParticleSystemShapeType.Cone;
+                shape.angle = 7f;
+                shape.radius = 0.08f;
+
+                ParticleSystem.ColorOverLifetimeModule colorOverLifetime = particles.colorOverLifetime;
+                colorOverLifetime.enabled = true;
+                Gradient gradient = new();
+                gradient.SetKeys(
+                    new[]
+                    {
+                        new GradientColorKey(new Color(1f, 0.85f, 0.3f), 0f),
+                        new GradientColorKey(new Color(1f, 0.45f, 0.08f), 0.5f),
+                        new GradientColorKey(new Color(1f, 0.18f, 0.02f), 1f)
+                    },
+                    new[]
+                    {
+                        new GradientAlphaKey(0f, 0f),
+                        new GradientAlphaKey(1f, 0.08f),
+                        new GradientAlphaKey(0.8f, 0.55f),
+                        new GradientAlphaKey(0f, 1f)
+                    });
+                colorOverLifetime.color = gradient;
+
+                ParticleSystem.SizeOverLifetimeModule sizeOverLifetime = particles.sizeOverLifetime;
+                sizeOverLifetime.enabled = true;
+                sizeOverLifetime.size = new ParticleSystem.MinMaxCurve(1f, AnimationCurve.Linear(0f, 1f, 1f, 0f));
+
+                ParticleSystemRenderer renderer = particles.GetComponent<ParticleSystemRenderer>();
+                renderer.sharedMaterial = flameMaterial;
+                renderer.renderMode = ParticleSystemRenderMode.Billboard;
+                renderer.maxParticleSize = 0.12f;
+
+                particles.Play();
+                Destroy(jet, 1.5f);
+            }
         }
 
         private IEnumerator FireworkSequence(int waveCount)

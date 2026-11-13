@@ -59,7 +59,23 @@ Khung chữ nhật, nan LED mảnh, bục tròn thấp. Không thêm vật cản
 
 Equalizer bàn DJ và LED dùng BPM cấu hình của ClubBeatClock; đây không phải phân tích âm thanh bằng FFT. Chuyển động ánh sáng liên tục, không thêm strobe. Camera và hiệu ứng quà giữ nguyên. Preview trình duyệt minh họa thiết kế, không thay thế kiểm chứng Unity/Windows.
 
+Quả cầu disco trong preview cần có các ô gương sáng/tối rõ để thấy hướng xoay, lõi tự phát sáng và quầng cyan mềm. Dùng xoay đều 24 độ/giây như rig Unity; nhịp sáng nhẹ và nút Tạm dừng dùng cùng đồng hồ mô phỏng. Không thêm đèn thời gian thực để bù cho vật liệu kim loại thiếu môi trường phản chiếu.
+
 Nhân vật dùng ảnh gốc không nén phá hủy. Ảnh hiện tại khoảng 240–256 px cho người chơi và 416 × 380 cho GIF chính; không coi phóng to là tạo thêm chi tiết HD. Sáu kiểu chuyển động toàn thân thay phiên theo BPM, nối mềm giữa các kiểu; mỗi nhân vật lệch pha để không đồng loạt cùng một dáng. Không bóp méo mạnh mặt, không thay art và không giả định sprite có rig tay chân. Giữ đường đi/jump, thứ hạng và scale hiệu ứng quà. GIF chính chỉ nhận chuyển động phụ nhẹ.
+
+## Character diversity and Top preview
+
+Giữ toàn bộ clip cũ, bổ sung bốn nhân vật chibi có silhouette và màu riêng: mèo cam, robot cyan, vịt vàng, phi hành gia trắng/tím. Một atlas PNG trong suốt 4×4 chứa bốn động tác cho mỗi nhân vật; không thay GIF chính. Hai nhóm cũ chiếm tổng 50% lượt chọn (đầu nấm 25%, gấu trúc 25%); bốn nhóm mới chia đều 50% còn lại. Không xem 12 clip cùng đầu nấm là 12 loại ngoại hình. Lệnh đổi nhân vật loại nhóm hiện tại rồi chọn theo trọng số còn lại; giữ nguyên quà và câu lệnh.
+
+Preview mặc định có 8 nhân vật: 4 thuộc hai nhóm cũ và 4 thuộc bốn nhóm mới. Ba Top đứng trên bục sát mép sân khấu, cùng hàng z=-4.15; bục Top 3 nâng lên y=0.55 và đưa về x=-4.6 để tách khỏi đám đông, giữ khoảng trống cho GIF chính. Tên, hạng và điểm minh họa đồng bộ bảng. Dùng nhãn gọn gắn với vị trí chiếu của nhân vật, tránh che mặt và chồng chữ. Nút Xem Top đưa camera tới góc sân khấu và quay lại toàn sàn; quà vẫn có thể focus như trước. Tất cả danh tính/điểm của preview phải ghi rõ mô phỏng, không giả là dữ liệu LIVE.
+
+## New-player entrance
+
+Người mới rơi từ phía trên về vị trí được phân: khoảng 10 đơn vị, 1.8 giây. Rơi tăng tốc rồi hãm mềm trong 72% thời gian đầu, chạm sàn và nảy nhẹ ở phần còn lại. Một quầng cyan lan ra trong khoảng 0.55 giây và squash/stretch nhẹ tạo cảm giác tiếp đất. Tái sử dụng glow/material/mesh và trạng thái spawn sẵn có, không thêm đèn thời gian thực, âm thanh hoặc thư viện. Hiệu ứng chỉ chạy một lần cho một lượt tạo người mới; nhận quà tiếp, focus và thay mẫu không làm rơi lại. Camera nhắm vị trí sàn trong lúc vào để thấy quá trình rơi. Giữ khả năng jump/walk hiện có để ngắt quá trình vào sàn.
+
+## Stage flame jets
+
+Bốn vòi phụt lửa đồ họa vàng–cam đặt trên mép sàn sân khấu phía sau người biểu diễn: x=-5,-1.6,1.6,5; y=0.8; z=-5.6. Phụt theo đợt ngắn, tắt mềm, không phủ bảng Top hoặc che mặt. Tái sử dụng hệ hạt/shader có sẵn, không thêm đèn/âm thanh. Giới hạn một đợt mỗi 3 giây, tối đa bốn vòi cùng lúc và dọn hiệu ứng sau khoảng 2 giây. Game kích hoạt cùng luồng pháo hoa/Party hiện có, giữ nguyên pháo hoa và pháo lạnh. Preview có nút Phụt lửa riêng, cùng cơ chế giới hạn và Tạm dừng.
 
 ## Do's and Don'ts
 
