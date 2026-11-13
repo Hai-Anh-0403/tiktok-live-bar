@@ -282,44 +282,189 @@ document.querySelectorAll('[data-action]').forEach(btn => {
 
 /* ═══ MUSIC MANAGEMENT ═════════════════════════════════ */
 let musicUploadInProgress = false;
+let musicOrderSaving = false;
+let musicFiles = [];
+let musicListRequest = 0;
+let musicRevision = 0;
+let musicDrag = null;
+
+function musicBusy() {
+    return musicUploadInProgress || musicOrderSaving;
+}
+
+function updateMusicControls() {
+    document.querySelectorAll('#music-file-input, #btn-upload-music, #btn-play-music-list, #music-file-list button')
+        .forEach(element => { element.disabled = musicBusy(); });
+    document.getElementById('btn-refresh-music').disabled = musicOrderSaving;
+    document.querySelectorAll('.music-drag-handle').forEach(element => { element.draggable = !musicBusy(); });
+    document.querySelectorAll('.music-move-up').forEach((element, index) => { element.disabled ||= index === 0; });
+    document.querySelectorAll('.music-move-down').forEach((element, index) => { element.disabled ||= index === musicFiles.length - 1; });
+}
 
 function setMusicUploadInProgress(busy) {
     musicUploadInProgress = busy;
-    document.querySelectorAll('#music-file-input, #btn-upload-music, #btn-play-music-list, #music-file-list button')
-        .forEach(element => { element.disabled = busy; });
+    if (busy) musicRevision++;
+    updateMusicControls();
+}
+
+function renderMusicList() {
+    const list = document.getElementById('music-file-list');
+    list.replaceChildren();
+    if (!musicFiles.length) list.textContent = 'Thư mục trống. Hãy tải lên file .mp3, .wav, .ogg.';
+    musicFiles.forEach((file, index) => {
+        const row = document.createElement('div');
+        row.className = 'shortcut-row music-row';
+        row.dataset.file = file;
+        const label = document.createElement('span');
+        label.className = 'music-track-label';
+        label.textContent = `${index + 1}. ${file}`;
+        const button = (text, className, description, action) => {
+            const element = document.createElement('button');
+            element.className = `btn btn-secondary btn-sm ${className}`;
+            element.textContent = text;
+            element.setAttribute('aria-label', `${description}: ${file}`);
+            element.title = description;
+            if (action) element.addEventListener('click', action);
+            return element;
+        };
+        const handle = button('↕', 'music-drag-handle', 'Kéo để đổi thứ tự; dùng phím mũi tên lên/xuống');
+        handle.addEventListener('keydown', event => {
+            if (event.key !== 'ArrowUp' && event.key !== 'ArrowDown') return;
+            event.preventDefault();
+            moveMusicTrack(file, event.key === 'ArrowUp' ? -1 : 1);
+        });
+        handle.addEventListener('dragstart', event => {
+            if (musicBusy()) { event.preventDefault(); return; }
+            musicDrag = { file };
+            row.classList.add('music-dragging');
+            event.dataTransfer.effectAllowed = 'move';
+            event.dataTransfer.setData('text/plain', file);
+        });
+        handle.addEventListener('dragend', () => {
+            if (musicDrag) { musicDrag = null; renderMusicList(); }
+        });
+        handle.addEventListener('pointerdown', event => {
+            if (event.pointerType === 'mouse' || musicBusy()) return;
+            event.preventDefault();
+            musicDrag = { file, pointerId: event.pointerId };
+            handle.setPointerCapture(event.pointerId);
+            row.classList.add('music-dragging');
+        });
+        handle.addEventListener('pointermove', event => {
+            if (!musicDrag || musicDrag.pointerId !== event.pointerId) return;
+            event.preventDefault();
+            const bounds = list.getBoundingClientRect();
+            if (event.clientY < bounds.top + 28) list.scrollTop -= 16;
+            if (event.clientY > bounds.bottom - 28) list.scrollTop += 16;
+            placeMusicDrag(document.elementFromPoint(event.clientX, event.clientY), event.clientY);
+        });
+        handle.addEventListener('pointerup', event => {
+            if (musicDrag?.pointerId !== event.pointerId) return;
+            handle.releasePointerCapture(event.pointerId);
+            finishMusicDrag();
+        });
+        handle.addEventListener('pointercancel', () => {
+            if (musicDrag) { musicDrag = null; renderMusicList(); }
+        });
+        row.append(handle, label,
+            button('↑', 'music-move-up', 'Đưa lên', () => moveMusicTrack(file, -1)),
+            button('↓', 'music-move-down', 'Đưa xuống', () => moveMusicTrack(file, 1)),
+            button('Phát bài này', 'music-play', 'Phát bài này', () => window.playTrack(encodeURIComponent(file))));
+        list.appendChild(row);
+    });
+    updateMusicControls();
+}
+
+function placeMusicDrag(target, y) {
+    const row = target?.closest('.music-row');
+    const list = document.getElementById('music-file-list');
+    if (!row || row.parentElement !== list || !musicDrag || row.dataset.file === musicDrag.file) return;
+    const source = [...list.children].find(element => element.dataset.file === musicDrag.file);
+    const bounds = row.getBoundingClientRect();
+    list.insertBefore(source, y < bounds.top + bounds.height / 2 ? row : row.nextSibling);
+    // Moving the row releases capture on touch browsers; capture again after the DOM move.
+    if (musicDrag.pointerId !== undefined) source.querySelector('.music-drag-handle').setPointerCapture(musicDrag.pointerId);
+    [...list.children].forEach((element, index) => {
+        element.querySelector('.music-track-label').textContent = `${index + 1}. ${element.dataset.file}`;
+    });
+}
+
+function finishMusicDrag() {
+    const file = musicDrag?.file;
+    if (!file) return;
+    const files = [...document.querySelectorAll('.music-row')].map(row => row.dataset.file);
+    musicDrag = null;
+    saveMusicOrder(files, file);
+}
+
+document.getElementById('music-file-list')?.addEventListener('dragover', event => {
+    if (!musicDrag || musicBusy()) return;
+    event.preventDefault();
+    event.dataTransfer.dropEffect = 'move';
+    placeMusicDrag(event.target, event.clientY);
+});
+document.getElementById('music-file-list')?.addEventListener('drop', event => {
+    if (!musicDrag || musicBusy()) return;
+    event.preventDefault();
+    finishMusicDrag();
+});
+
+function moveMusicTrack(file, direction) {
+    if (musicBusy() || musicDrag) return;
+    const files = [...musicFiles];
+    const index = files.indexOf(file);
+    const target = index + direction;
+    if (index < 0 || target < 0 || target >= files.length) return;
+    [files[index], files[target]] = [files[target], files[index]];
+    saveMusicOrder(files, file);
+}
+
+async function saveMusicOrder(files, focusFile) {
+    if (musicBusy()) return;
+    if (files.every((file, index) => file === musicFiles[index])) { renderMusicList(); return; }
+    const previous = musicFiles;
+    musicOrderSaving = true;
+    musicRevision++;
+    musicFiles = files;
+    renderMusicList();
+    const status = document.getElementById('music-upload-status');
+    status.textContent = 'Đang lưu thứ tự…';
+    let stale = false;
+    try {
+        const response = await fetch('/api/music/order', {
+            method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ files })
+        });
+        stale = response.status === 409;
+        const result = await response.json();
+        if (!response.ok || !result.success) throw new Error(result.error || `HTTP ${response.status}`);
+        status.textContent = 'Đã lưu thứ tự. Bài đang phát tiếp tục; bài tiếp theo theo danh sách mới.';
+    } catch (error) {
+        musicFiles = previous;
+        status.textContent = `Lỗi lưu thứ tự: ${error.message}`;
+    } finally {
+        musicOrderSaving = false;
+        renderMusicList();
+        if (stale) await loadMusicList();
+        [...document.querySelectorAll('.music-row')].find(row => row.dataset.file === focusFile)
+            ?.querySelector('.music-drag-handle').focus({ preventScroll: true });
+    }
 }
 
 async function loadMusicList() {
     const listEl = document.getElementById('music-file-list');
-    if (!listEl) return;
+    if (!listEl || musicOrderSaving || musicDrag) return;
+    const request = ++musicListRequest;
+    const revision = musicRevision;
     try {
         const res = await fetch('/api/music');
         const data = await res.json();
+        if (request !== musicListRequest || revision !== musicRevision || musicOrderSaving || musicDrag) return;
         if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
-        if (!data.files || data.files.length === 0) {
-            listEl.textContent = 'Thư mục trống. Hãy tải lên file .mp3, .wav, .ogg.';
-            return;
-        }
-        listEl.replaceChildren();
-        data.files.forEach((file, index) => {
-            const row = document.createElement('div');
-            row.className = 'shortcut-row';
-            const label = document.createElement('span');
-            label.style.minWidth = '0';
-            label.style.overflowWrap = 'anywhere';
-            label.textContent = `${index + 1}. ${file}`;
-            const button = document.createElement('button');
-            button.className = 'btn btn-secondary btn-sm';
-            button.style.flexShrink = '0';
-            button.style.marginLeft = '8px';
-            button.textContent = 'Phát bài này';
-            button.disabled = musicUploadInProgress;
-            button.addEventListener('click', () => window.playTrack(encodeURIComponent(file)));
-            row.append(label, button);
-            listEl.appendChild(row);
-        });
+        musicFiles = Array.isArray(data.files) ? data.files : [];
+        renderMusicList();
     } catch (e) {
-        listEl.textContent = `Lỗi tải danh sách: ${e.message}`;
+        if (request === musicListRequest && revision === musicRevision && !musicOrderSaving && !musicDrag)
+            listEl.textContent = `Lỗi tải danh sách: ${e.message}`;
     }
 }
 
@@ -334,7 +479,7 @@ async function requestMusicPlay(fileName) {
 }
 
 window.playTrack = async function(encodedFileName) {
-    if (musicUploadInProgress) return;
+    if (musicBusy() || musicDrag) return;
     const statusEl = document.getElementById('music-upload-status');
     try {
         const fileName = decodeURIComponent(encodedFileName);
@@ -351,7 +496,7 @@ document.getElementById('btn-refresh-music')?.addEventListener('click', loadMusi
 document.getElementById('btn-play-music-list')?.addEventListener('click', () => window.playTrack(''));
 
 document.getElementById('btn-upload-music')?.addEventListener('click', async () => {
-    if (musicUploadInProgress) return;
+    if (musicBusy() || musicDrag) return;
     const fileInput = document.getElementById('music-file-input');
     const statusEl = document.getElementById('music-upload-status');
     const files = Array.from(fileInput?.files || []);
@@ -397,8 +542,8 @@ document.getElementById('btn-upload-music')?.addEventListener('click', async () 
     } catch (e) {
         if (statusEl) statusEl.textContent = `Đã tải lên ${uploadedCount}/${files.length}. Lỗi: ${e.message}`;
     } finally {
-        setMusicUploadInProgress(false);
         await loadMusicList();
+        setMusicUploadInProgress(false);
     }
 });
 

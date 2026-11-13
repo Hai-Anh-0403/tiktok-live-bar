@@ -36,6 +36,9 @@ DJ_MUSIC/*.WAV
 DJ_MUSIC/*.ogg
 DJ_MUSIC/*.OGG
 DJ_MUSIC/*.flac
+DJ_MUSIC/playlist.json
+DJ_MUSIC/.playlist-*.tmp
+DJ_MUSIC/.playlist-*.rollback
 
 DJ_VIDEO/*.mp4
 DJ_VIDEO/*.MP4

@@ -152,18 +152,106 @@ const musicDirs = [
     path.join(__dirname, '..', 'Build', 'DJ_MUSIC')
 ];
 
+async function musicFiles(dir) {
+    await fs.mkdir(dir, { recursive: true });
+    const entries = await fs.readdir(dir, { withFileTypes: true });
+    return entries.filter(entry => entry.isFile() && /\.(mp3|wav|ogg)$/i.test(entry.name))
+        .map(entry => entry.name)
+        .sort((a, b) => a.toUpperCase() < b.toUpperCase() ? -1 : a.toUpperCase() > b.toUpperCase() ? 1 : 0);
+}
+
 app.get('/api/music', async (_req, res) => {
     try {
-        const musicDir = musicDirs[0];
-        await fs.mkdir(musicDir, { recursive: true });
-        const entries = await fs.readdir(musicDir);
-        const exts = ['.mp3', '.wav', '.ogg'];
-        const files = entries.filter(f => exts.includes(path.extname(f).toLowerCase()))
-            .sort((a, b) => a.toUpperCase() < b.toUpperCase() ? -1 : a.toUpperCase() > b.toUpperCase() ? 1 : 0);
-        res.json({ files });
+        const files = await musicFiles(musicDirs[0]);
+        let saved;
+        try {
+            saved = JSON.parse(await fs.readFile(path.join(musicDirs[0], 'playlist.json'), 'utf8'));
+        } catch (error) {
+            if (error.code !== 'ENOENT' && !(error instanceof SyntaxError)) throw error;
+        }
+        const remaining = new Set(files);
+        const ordered = [];
+        for (const file of Array.isArray(saved?.files) ? saved.files : []) {
+            if (remaining.delete(file)) ordered.push(file);
+        }
+        res.json({ files: [...ordered, ...remaining] });
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
+});
+
+async function stageMusicMetadata(file, bytes) {
+    const handle = await fs.open(file, 'wx');
+    try {
+        await handle.writeFile(bytes);
+        await handle.sync();
+    } finally {
+        await handle.close();
+    }
+}
+
+let musicOrderQueue = Promise.resolve();
+app.put('/api/music/order', express.json(), (req, res) => {
+    const save = async () => {
+        const staged = [];
+        let committed = 0;
+        let rollbackFailed = false;
+        try {
+            const files = req.body?.files;
+            if (!Array.isArray(files) || files.some(file => typeof file !== 'string' || !file || /[/\\]/.test(file)) || new Set(files).size !== files.length) {
+                return res.status(400).json({ error: 'Danh sách thứ tự không hợp lệ.' });
+            }
+            const actual = await musicFiles(musicDirs[0]);
+            if (files.length !== actual.length || files.some(file => !actual.includes(file))) {
+                return res.status(409).json({ error: 'Danh sách nhạc đã thay đổi. Hãy làm mới rồi thử lại.' });
+            }
+            const bytes = JSON.stringify({ files }) + '\n';
+            const token = require('crypto').randomUUID();
+            for (const dir of musicDirs) {
+                await fs.mkdir(dir, { recursive: true });
+                const manifest = path.join(dir, 'playlist.json');
+                const entry = { manifest, temporary: path.join(dir, `.playlist-${token}.tmp`), rollback: path.join(dir, `.playlist-${token}.rollback`), hadManifest: false };
+                staged.push(entry);
+                let old;
+                try { old = await fs.readFile(manifest); }
+                catch (error) { if (error.code !== 'ENOENT') throw error; }
+                if (old !== undefined) {
+                    await stageMusicMetadata(entry.rollback, old);
+                    entry.hadManifest = true;
+                }
+                await stageMusicMetadata(entry.temporary, bytes);
+            }
+            // Prepare both copies before replacing either; PUTs share this queue through rollback.
+            for (const entry of staged) {
+                await fs.rename(entry.temporary, entry.manifest);
+                committed++;
+            }
+        } catch (error) {
+            try {
+                for (let i = committed - 1; i >= 0; i--) {
+                    const entry = staged[i];
+                    if (entry.hadManifest) await fs.rename(entry.rollback, entry.manifest);
+                    else await fs.unlink(entry.manifest);
+                }
+            } catch (rollbackError) {
+                rollbackFailed = true;
+                console.error('Không thể khôi phục thứ tự nhạc; giữ file .rollback để phục hồi:', rollbackError);
+                error = new Error(`${error.message}; rollback: ${rollbackError.message}`);
+            }
+            res.status(500).json({ error: error.message });
+            return;
+        } finally {
+            for (const entry of staged) {
+                for (const file of rollbackFailed ? [entry.temporary] : [entry.temporary, entry.rollback]) {
+                    try { await fs.unlink(file); }
+                    catch (error) { if (error.code !== 'ENOENT') console.error('Không thể dọn metadata nhạc:', error); }
+                }
+            }
+        }
+        broadcast({ type: 'music_order' });
+        res.json({ success: true });
+    };
+    musicOrderQueue = musicOrderQueue.then(save, save);
 });
 
 // Stream upload trực tiếp vào file trên ổ đĩa, hỗ trợ file nhạc dài / mixtape lớn đến 2GB

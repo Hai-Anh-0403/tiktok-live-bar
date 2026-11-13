@@ -249,6 +249,7 @@ namespace TikTokLiveGame
             if (!focusing) transform.rotation = Quaternion.LookRotation(transform.rotation * Vector3.forward);
             Camera camera = GetComponent<Camera>();
             camera.fieldOfView = Mathf.Lerp(camera.fieldOfView, desiredFov, blend);
+            ClubSceneBuilder.EnsureBackdropContains(camera);
         }
 
         private static float DirectorShotBars(int shot)

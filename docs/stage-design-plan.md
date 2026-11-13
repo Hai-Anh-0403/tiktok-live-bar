@@ -89,7 +89,7 @@ Post-implementation notes: subject-box framing includes the main performer at z=
 
 ## Multiple music uploads and ordered playback
 
-Status: Implemented in development; native audio validation pending.
+Status: Implemented in development; original filename-order behavior superseded by saved drag-and-drop ordering below; native audio validation pending.
 
 Scope: extend the existing Nhạc Nền tab and upload endpoint. Select multiple MP3/WAV/OGG files, validate them before starting, upload sequentially with autoplay suppressed, then request playback once. Multiple uploads start the displayed playlist from the beginning; one upload preserves the old behavior of playing that file. Keep existing tracks and per-track playback. Order is case-insensitive filename A–Z, matching the existing native player for sanitized upload names; numeric prefixes provide custom order. No playlist schema or native player change is required.
 
@@ -97,8 +97,20 @@ Contract: POST /api/music/upload?autoplay=false stores/synchronizes without emit
 
 Plan: add failing isolated HTTP/WebSocket contract tests using temporary music folders; implement the minimal Bridge/DOM edits; verify bulk progress, duplicate-click protection, error recovery, old single/per-track behavior and playlist order in two desktop/mobile rounds; verify unchanged native auto-next logic with explicit boundary doubles; review actual changes, update documentation hashes and include Bridge sources/tests in the source package. Rollback: revert the scoped music commit; media files are not deleted.
 
+## Drag-and-drop playlist and camera clearance
+
+Status: Implemented in development; native Unity/audio validation pending.
+
+Scope: add accessible desktop/touch playlist drag-and-drop with persistent metadata in both existing music folders; GET uses saved order, PUT validates a complete permutation and safely synchronizes playlist.json, and a music_order event refreshes the native queue without restarting the playing clip. Retain batch/single uploads, playback controls, audio files, fallback ordering and existing event contracts. No dependency or audio rename/delete.
+
+Camera investigation: the textured room has fixed walls and a ceiling derived from the 941x1672 backdrop: side x=±12.3816, ceiling y=17.6. Portrait framing may move the camera outside those limits during retreat. Reproduce against real room planes, then expand only the decorative room about its fixed back-wall anchor to keep camera/near plane inside; preserve all director/focus paths, four faces, aspect ratio and chroma.
+
+Plan: source-based failing tests for room crossings and ordering, minimal dev changes, two actual HTTP/UI and native-source CPU rounds, desktop/mobile rendered room checks, independent diff review and refreshed docs/source/preview artifacts. Rollback: revert this scoped commit; music/audio content remains intact.
+
 ## Original stage rollback
 
 Apply the patch only on a development branch based on eff8b3f132647ecc9e2929e388a7e9f7b542f762. Git preserves the original scene and presentation scripts. No deployment, push, restart or remote configuration change is authorized.
 
 Music development verification: six isolated HTTP/WebSocket cases and two full UI rounds across desktop/mobile/320px and dark/light preferences passed; 25 Bridge tests passed. Two actual-source CPU rounds confirmed existing next/wrap behavior. The optional autoplay flag preserves legacy single-upload behavior; native audio decoding remains unverified.
+
+Post-implementation notes for drag-and-drop/clearance: ordering is saved without renaming audio; live queue refresh preserves the current clip. Empty refresh cancels pending loads safely, and failed rollback retains recovery metadata. Two HTTP/UI rounds passed (31 Node tests; desktop/mobile/320, dark/light), with two native-source playlist rounds. Clearance red tests reproduced room crossings; corrected native and browser rounds keep all four backdrop faces and every tested retreat clear. Review found no remaining P1/P2 issues. Unity rendering/audio remain unverified.

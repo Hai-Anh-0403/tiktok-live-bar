@@ -93,7 +93,15 @@ Hai bảng quà/Top mặc định hiện, có thể ẩn/hiện riêng trong men
 
 ## Music control panel
 
-Tab Nhạc Nền dùng giao diện đen/vàng, card, nút và font có sẵn của trang điều khiển; không đổi theme chung. Cho chọn nhiều MP3/WAV/OGG, hiện tiến độ theo từng bài và khóa thao tác phát/upload trùng trong lúc tải. Danh sách đánh số theo tên file A–Z (không phân biệt hoa/thường), khớp bộ phát hiện tại với tên upload đã chuẩn hóa; hướng dẫn đặt 01, 02, 03 nếu muốn thứ tự riêng. Nhiều bài tải xong mới phát danh sách từ đầu; một bài vẫn phát bài vừa tải. Có nút Phát từ đầu danh sách và các nút phát từng bài cũ. Lỗi ghi/đồng bộ phải hiện rõ, không báo phát thành công khi upload lỗi. Giữ tên bài bằng textContent, nhãn input rõ, trạng thái aria-live và bố cục một cột trên mobile.
+Tab Nhạc Nền dùng giao diện đen/vàng, card, nút và font có sẵn của trang điều khiển; không đổi theme chung. Cho chọn nhiều MP3/WAV/OGG, hiện tiến độ theo từng bài và khóa thao tác phát/upload trùng trong lúc tải. Danh sách đánh số theo thứ tự kéo thả đã lưu; khi chưa sắp xếp thì dùng A–Z không phân biệt hoa/thường. Nhiều bài tải xong mới phát danh sách từ đầu; một bài vẫn phát bài vừa tải. Có nút Phát từ đầu danh sách và các nút phát từng bài cũ. Lỗi ghi/đồng bộ phải hiện rõ, không báo phát thành công khi upload lỗi. Giữ tên bài bằng textContent, nhãn input rõ, trạng thái aria-live và bố cục một cột trên mobile.
+
+## Playlist ordering refinement
+
+Danh sách nhạc có tay nắm kéo thả trên desktop/mobile và nút lên/xuống dùng được bằng bàn phím. Đánh lại số thứ tự sau khi lưu; hiện rõ Đang lưu/Đã lưu/Lỗi qua aria-live. Thứ tự lưu vào playlist.json đi cùng thư mục nhạc, không đổi tên hoặc nội dung bài. Bài mới nối cuối danh sách theo A–Z; kéo thả không làm ngắt bài đang phát, và bài tiếp theo theo thứ tự mới. Khóa thao tác trong lúc upload hoặc lưu; lỗi API khôi phục thứ tự đã xác nhận. Tái dùng card/nút hiện có, không thêm thư viện kéo thả.
+
+## Camera backdrop clearance
+
+Background là phòng trang trí gồm mặt sau, hai vách và trần. Không cho camera hoặc mặt phẳng cắt gần đi xuyên qua vách/trần khi hết zoom và lùi ra. Giữ đường quay/khung hình hiện có, tăng đồng đều phần phòng trang trí quanh neo mặt sau khi cần; không thu phòng lại trong phiên để tránh nền co giãn qua lại. Không kéo giãn riêng một chiều, không di chuyển nhân vật/sân khấu hoặc bỏ mặt background. Preview phải mô phỏng đủ bốn mặt để kiểm tra đường lùi thật.
 
 ## Do's and Don'ts
 

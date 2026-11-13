@@ -11,26 +11,50 @@ const { once } = require('node:events');
 const WebSocket = require('ws');
 
 const bridgeDir = path.resolve(__dirname, '..');
-let tempRoot, child, socket, baseUrl;
+let tempRoot, codeDir, port, child, socket, baseUrl;
 const messages = [];
 const audio = Buffer.from([0, 255, 73, 68, 51, 13, 10, 42]);
 let musicDirs;
 
 before(async () => {
     tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'music-upload-'));
-    const codeDir = path.join(tempRoot, 'TikTokBridge');
+    codeDir = path.join(tempRoot, 'TikTokBridge');
     await fs.mkdir(codeDir);
     for (const entry of ['server.js', 'src', 'config', 'public']) {
         await fs.cp(path.join(bridgeDir, entry), path.join(codeDir, entry), { recursive: true });
     }
     musicDirs = [path.join(tempRoot, 'DJ_MUSIC'), path.join(tempRoot, 'Build', 'DJ_MUSIC')];
+    await fs.writeFile(path.join(tempRoot, 'fault.cjs'), `
+        const fs = require('node:fs/promises');
+        const path = require('node:path');
+        const rename = fs.rename;
+        fs.rename = async (from, to) => {
+            if (to.endsWith('/Build/DJ_MUSIC/playlist.json')) {
+                try {
+                    await fs.unlink(${JSON.stringify(path.join(tempRoot, 'fail-rename'))});
+                    throw Object.assign(new Error('injected second rename failure'), { code: 'EIO' });
+                } catch (error) { if (error.code !== 'ENOENT') throw error; }
+            }
+            if (from.endsWith('.rollback')) {
+                try {
+                    await fs.access(${JSON.stringify(path.join(tempRoot, 'fail-rollback'))});
+                    throw Object.assign(new Error('injected rollback refusal'), { code: 'EACCES' });
+                } catch (error) { if (error.code !== 'ENOENT') throw error; }
+            }
+            return rename(from, to);
+        };
+    `);
     const listener = net.createServer();
     listener.listen(0, '127.0.0.1');
     await once(listener, 'listening');
-    const port = listener.address().port;
+    port = listener.address().port;
     await new Promise(resolve => listener.close(resolve));
     baseUrl = `http://127.0.0.1:${port}`;
-    child = spawn(process.execPath, [path.join(codeDir, 'server.js')], {
+    await startServer();
+});
+
+async function startServer() {
+    child = spawn(process.execPath, ['--require', path.join(tempRoot, 'fault.cjs'), path.join(codeDir, 'server.js')], {
         cwd: codeDir,
         env: { PATH: process.env.PATH, NODE_PATH: path.join(bridgeDir, 'node_modules'), HOST: '127.0.0.1', PORT: String(port), ALLOW_LAN: '0' },
         stdio: ['ignore', 'pipe', 'pipe']
@@ -47,10 +71,10 @@ before(async () => {
     socket = new WebSocket(baseUrl.replace('http:', 'ws:'));
     socket.on('message', raw => {
         const message = JSON.parse(raw);
-        if (message.type === 'music_reload') messages.push(message);
+        if (message.type.startsWith('music_')) messages.push(message);
     });
     await once(socket, 'open');
-});
+}
 
 after(async () => {
     if (socket) socket.terminate();
@@ -65,6 +89,7 @@ after(async () => {
 beforeEach(async () => {
     for (const dir of musicDirs) await fs.rm(dir, { recursive: true, force: true });
     messages.length = 0;
+    for (const flag of ['fail-rename', 'fail-rollback']) await fs.rm(path.join(tempRoot, flag), { force: true });
 });
 
 async function upload(fileName, query = '') {
@@ -159,4 +184,120 @@ test('copy failure returns 500 without autoplay and keeps previously stored song
     }
     await flushMessages();
     assert.deepEqual(messages, []);
+});
+
+async function seed(files) {
+    for (const dir of musicDirs) {
+        await fs.mkdir(dir, { recursive: true });
+        for (const name of files) await fs.writeFile(path.join(dir, name), audio);
+    }
+}
+
+async function order(files) {
+    return fetch(`${baseUrl}/api/music/order`, {
+        method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ files })
+    });
+}
+
+async function listing() {
+    return (await (await fetch(`${baseUrl}/api/music`)).json()).files;
+}
+
+test('order persists in both manifests across restart, appends new files, and only refreshes native order', async () => {
+    await seed(['a.mp3', 'B.wav', 'z.ogg']);
+    const files = ['z.ogg', 'a.mp3', 'B.wav'];
+    const response = await order(files);
+    assert.equal(response.status, 200);
+    assert.deepEqual(await response.json(), { success: true });
+    assert.deepEqual(await listing(), files);
+    for (const dir of musicDirs) {
+        assert.deepEqual(JSON.parse(await fs.readFile(path.join(dir, 'playlist.json'), 'utf8')), { files });
+        for (const name of files) assert.deepEqual(await fs.readFile(path.join(dir, name)), audio);
+        assert.deepEqual((await fs.readdir(dir)).sort(), [...files, 'playlist.json'].sort());
+    }
+    await flushMessages();
+    assert.deepEqual(messages, [{ type: 'music_order' }]);
+    socket.terminate();
+    const exited = once(child, 'exit'); child.kill('SIGTERM'); await exited;
+    await startServer();
+    assert.deepEqual(await listing(), files);
+    for (const name of ['-new.mp3', 'C-new.wav']) assert.equal((await upload(name, '?autoplay=false')).status, 200);
+    assert.deepEqual(await listing(), [...files, '-new.mp3', 'C-new.wav']);
+});
+
+test('listing ignores stale, duplicate, non-exact manifest entries and malformed manifests without losing audio', async () => {
+    await seed(['a.mp3', 'B.wav', 'z.ogg']);
+    await fs.mkdir(path.join(musicDirs[0], 'folder.mp3'));
+    for (const manifest of ['{', '{}', '{"files":null}', '{"files":"z.ogg"}']) {
+        await fs.writeFile(path.join(musicDirs[0], 'playlist.json'), manifest);
+        assert.deepEqual(await listing(), ['a.mp3', 'B.wav', 'z.ogg']);
+    }
+    await fs.writeFile(path.join(musicDirs[0], 'playlist.json'), JSON.stringify({ files: ['z.ogg', 'z.ogg', 'b.wav', '../a.mp3', 'missing.mp3', 1, 'B.wav'] }));
+    assert.deepEqual(await listing(), ['z.ogg', 'B.wav', 'a.mp3']);
+});
+
+test('order rejects invalid or stale permutations without metadata, audio changes or events', async () => {
+    await seed(['a.mp3', 'b.wav']);
+    for (const files of [null, 'a.mp3', [1, 'b.wav'], ['a.mp3', 'a.mp3'], ['../a.mp3', 'b.wav'], ['a.mp3', 'sub/b.wav'], ['a.mp3', 'b\\wav'], ['a.mp3'], ['a.mp3', 'unknown.wav'], ['A.mp3', 'b.wav'], ['a.mp3', 'b.wav', 'new.ogg']]) {
+        const response = await order(files);
+        assert.ok([400, 409].includes(response.status), `${JSON.stringify(files)}: ${response.status}`);
+        assert.equal(typeof (await response.json()).error, 'string');
+    }
+    for (const dir of musicDirs) {
+        assert.deepEqual((await fs.readdir(dir)).sort(), ['a.mp3', 'b.wav']);
+        for (const name of ['a.mp3', 'b.wav']) assert.deepEqual(await fs.readFile(path.join(dir, name)), audio);
+    }
+    await flushMessages(); assert.deepEqual(messages, []);
+});
+
+test('second manifest rename failure restores exact previous bytes and cleans only owned metadata temps', async () => {
+    await seed(['a.mp3', 'b.wav']);
+    const old = Buffer.from(' { "files": ["b.wav", "a.mp3"] }\n');
+    await fs.writeFile(path.join(musicDirs[0], 'playlist.json'), old);
+    await fs.writeFile(path.join(musicDirs[0], 'unrelated.tmp'), 'keep');
+    await fs.writeFile(path.join(musicDirs[1], 'playlist.json'), old);
+    await fs.writeFile(path.join(tempRoot, 'fail-rename'), '1');
+    const response = await order(['a.mp3', 'b.wav']);
+    assert.equal(response.status, 500);
+    assert.equal(typeof (await response.json()).error, 'string');
+    assert.deepEqual(await fs.readFile(path.join(musicDirs[0], 'playlist.json')), old);
+    assert.deepEqual(await fs.readFile(path.join(musicDirs[1], 'playlist.json')), old);
+    for (const dir of musicDirs) {
+        for (const name of ['a.mp3', 'b.wav']) assert.deepEqual(await fs.readFile(path.join(dir, name)), audio);
+        assert.deepEqual((await fs.readdir(dir)).sort(), (dir === musicDirs[0] ? ['a.mp3', 'b.wav', 'playlist.json', 'unrelated.tmp'] : ['a.mp3', 'b.wav', 'playlist.json']).sort());
+    }
+    await flushMessages(); assert.deepEqual(messages, []);
+});
+
+test('failed first save leaves no primary manifest and concurrent saves finish with identical copies', async () => {
+    await seed(['a.mp3', 'b.wav']);
+    await fs.writeFile(path.join(tempRoot, 'fail-rename'), '1');
+    assert.equal((await order(['b.wav', 'a.mp3'])).status, 500);
+    await assert.rejects(fs.access(path.join(musicDirs[0], 'playlist.json')), { code: 'ENOENT' });
+    await flushMessages(); assert.deepEqual(messages, []);
+    await assert.rejects(fs.access(path.join(musicDirs[1], 'playlist.json')), { code: 'ENOENT' });
+    const responses = await Promise.all(Array.from({ length: 12 }, (_, i) => order(i % 2 ? ['a.mp3', 'b.wav'] : ['b.wav', 'a.mp3'])));
+    for (const response of responses) assert.equal(response.status, 200);
+    assert.deepEqual(await fs.readFile(path.join(musicDirs[0], 'playlist.json')), await fs.readFile(path.join(musicDirs[1], 'playlist.json')));
+    await flushMessages(); assert.equal(messages.length, 12);
+    assert.ok(messages.every(message => JSON.stringify(message) === '{"type":"music_order"}'));
+});
+
+test('rollback refusal returns 500, emits nothing and preserves original metadata for recovery', async () => {
+    await seed(['a.mp3', 'b.wav']);
+    const old = Buffer.from(' { "files": ["b.wav", "a.mp3"] }\n');
+    for (const dir of musicDirs) await fs.writeFile(path.join(dir, 'playlist.json'), old);
+    for (const flag of ['fail-rename', 'fail-rollback']) await fs.writeFile(path.join(tempRoot, flag), '1');
+    const response = await order(['a.mp3', 'b.wav']);
+    assert.equal(response.status, 500);
+    assert.match((await response.json()).error, /rollback.*injected rollback refusal/);
+    for (const dir of musicDirs) {
+        const names = await fs.readdir(dir);
+        const rollback = names.find(name => name.endsWith('.rollback'));
+        assert.ok(rollback, 'original manifest must remain recoverable');
+        assert.deepEqual(await fs.readFile(path.join(dir, rollback)), old);
+        assert.equal(names.some(name => name.endsWith('.tmp')), false);
+        for (const name of ['a.mp3', 'b.wav']) assert.deepEqual(await fs.readFile(path.join(dir, name)), audio);
+    }
+    await flushMessages(); assert.deepEqual(messages, []);
 });

@@ -872,3 +872,22 @@ kbd {
     .demo-grid   { grid-template-columns: repeat(2,1fr); }
     .rule-row-bot { grid-template-columns: 1fr 1fr; }
 }
+
+/* Playlist ordering uses the panel's existing theme and buttons. */
+#music-file-list .music-row {
+    display: grid;
+    grid-template-columns: 36px minmax(0, 1fr) 36px 36px auto;
+    gap: 6px;
+    align-items: center;
+}
+.music-track-label { min-width: 0; overflow-wrap: anywhere; }
+#music-file-list button { min-height: 36px; padding: 6px; }
+.music-drag-handle { cursor: grab; touch-action: none; user-select: none; }
+.music-dragging { opacity: 0.6; outline: 1px dashed var(--gold); }
+#music-file-list button:focus-visible { outline: 2px solid var(--gold); outline-offset: 1px; }
+#music-order-help { margin-bottom: 10px; }
+@media (max-width: 520px) {
+    #music-file-list .music-row { grid-template-columns: 44px minmax(0, 1fr) 44px 44px; }
+    #music-file-list button { min-height: 44px; }
+    #music-file-list .music-play { grid-column: 2 / -1; justify-self: end; }
+}

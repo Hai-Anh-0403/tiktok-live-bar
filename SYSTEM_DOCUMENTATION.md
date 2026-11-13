@@ -51,6 +51,7 @@ Version: existing application 1.0.0; this change does not increase the version.
 - A two-beat blend from the outgoing position/look target/FOV joins shots, including startup and the return from an event focus; existing exponential damping continues afterward. Director framing projects all eight corners of each intended subject box with a 0.9 framing margin for the actual camera aspect and moves backward along the viewing direction as needed. This applies only to director shots; existing gift, walk, fireworks and welcome focus paths retain their durations, priorities and floor anchors.
 - F6 advances to the next director shot when no event focus is active. The browser provides a twelve-view button and an automatic director toggle, retains Xem Top and gift close-ups, and freezes position, target, FOV and shot timing on Pause.
 - Browser camera poses are sampled from the actual native ConfigureDirectorShot method into camera-shots.json (two directions, 65 samples per shot) and fitted to the browser aspect. The exported source hash binds the data to its C# source. Its representative crowd bounds are fixed at x=-5.2..5.2, z=-4.15..3.4; native framing still uses live PlayerManager bounds. The browser remains a concept renderer, not a native camera/framing or Windows release test.
+- Camera clearance correction: the actual 941x1672 texture creates a fixed initial room with side walls x=±12.3816 and ceiling y=17.6. Wide portrait framing could put the camera outside these planes when retreating from a gift close-up, letting the backdrop occlude the stage. EnsureBackdropContains runs after the final camera pose/FOV, grows only the decorative room uniformly about (0,-4.4,-12.5), and keeps the camera and near plane inside with one unit plus the near-corner radius of padding. The back-wall center, four faces, UVs, actor/stage transforms, director/focus paths and chroma visibility remain. Growth never shrinks during a session. The preview now includes all four real room faces and mirrors this correction.
 
 ## Ranked wing themes
 
@@ -76,14 +77,16 @@ Version: existing application 1.0.0; this change does not increase the version.
 ## Music upload and playback
 
 - The Windows control page remains http://127.0.0.1:3000/control.html, tab Nhạc Nền (run.bat starts the Bridge). Multiple MP3/WAV/OGG files are uploaded sequentially, using each File as the request body instead of buffering the full audio in JavaScript. Per-file progress and a busy state prevent simultaneous upload/play actions. Invalid extensions and collisions after the existing filename normalization are rejected before a batch starts.
-- GET /api/music returns case-insensitive filename order for the displayed, numbered playlist. The existing native MusicPlaylistPlayer orders tracks by StringComparer.OrdinalIgnoreCase; sanitized upload names contain ASCII letters/digits/dot/underscore/hyphen. Prefix names with 01, 02, 03 for a preferred sequence. No new playlist file or metadata schema is introduced.
+- GET /api/music returns saved playlist order, appending new/unlisted tracks in the prior case-insensitive filename order. Without valid metadata it falls back to that A–Z order. The native player applies the same saved names to the files in its selected music folder and appends remaining files. Missing, duplicate or unknown metadata entries do not hide or delete audio.
 - POST /api/music/upload accepts the optional query autoplay=false to suppress music_reload during storage/synchronization. The default remains immediate playback for existing clients. Success retains {success:true,fileName}; write/copy failures report an error and do not start playback. Existing primary DJ_MUSIC and Build/DJ_MUSIC locations remain in use.
 - After a successful multi-file batch, the control page calls existing POST /api/music/play with fileName:"" once to start the displayed playlist from the beginning. A single upload still plays that uploaded file, preserving previous behavior. The new Phát từ đầu danh sách button and existing per-track play buttons use the same endpoint. Partial upload failure stops the batch without autoplay; completed uploads remain available.
-- The native MusicPlaylistPlayer source remains unchanged: ReloadPlaylist refreshes tracks, natural completion schedules the next index, and the last track wraps to the first. Existing MP3/WAV/OGG loading, fades, volume, watchdog and decode-failure handling remain. Runtime decoding and audible playback on Windows still require native validation.
+- Drag-and-drop handles support desktop, touch scrolling and pointer drag; arrow keys and up/down buttons provide keyboard access. Dropping or moving saves once, updates row numbers and restores focus to the same song. Upload/play/order controls are locked during saving; stale GET responses cannot overwrite a newer order. Failure restores the confirmed list; a 409 refreshes changed server contents. Moving songs never sends a play request.
+- PUT /api/music/order accepts {files:[exact existing filenames]} and validates a complete, unique permutation of current audio files. Invalid names/paths/duplicates return 400; stale or unknown contents return 409. Serialized saves stage and synchronize playlist.json in both DJ_MUSIC folders, replacing metadata atomically. Write/rename failure returns 500 without an event and attempts to restore previous metadata; if the OS refuses rollback, the previous bytes are retained in a recovery file and the failure is reported. Audio is never renamed or removed. Runtime metadata/recovery files are ignored by Git.
+- A successful save broadcasts the new server-generated music_order event. TikTokGameController calls MusicPlaylistPlayer.RefreshPlaylistOrder, preserving the currently playing/loading clip, AudioSource, playback time, fade and volume while remapping its queue index; natural completion then follows the new order and wraps. ReloadPlaylist still handles start-from-beginning and named playback. Empty queues are guarded. Existing MP3/WAV/OGG decoding, watchdog and failed-track behavior remain; real Unity audio still requires native validation.
 
 ## IPC, configuration and dependencies
 
-WebSocket schemas, TikFinity settings, player data and package dependencies are unchanged. The HTTP music API change is limited to the optional autoplay flag, deterministic list order and explicit copy-failure reporting described above. Existing Unity native resolution command-line options are honored when supplied; otherwise the original 540 x 960 window default remains. The launcher continues to run TikTokBridge/server.js. Preserve configuration and personal media when applying the source patch.
+Existing WebSocket payload fields, TikFinity settings, player data and package dependencies remain. The new music_order event refreshes native playlist order; existing music_reload behavior remains. HTTP music additions are the order endpoint, saved ordering, optional upload autoplay flag and explicit copy-failure reporting above. Update the Bridge/control page and native source together for live order changes. Existing Unity native resolution command-line options remain; otherwise the default is 540 x 960. The launcher continues to run TikTokBridge/server.js. Preserve configuration and personal media when applying the source patch.
 
 ## Verification and release
 
@@ -101,16 +104,16 @@ The preview ZIP includes its browser source and regression checks. Two desktop/m
 
 Run `node scripts/check-docs.js`. Review behavior notes before refreshing markers.
 
-<!-- docs-check: UnityProject/Assets/Scripts/ClubSceneBuilder.cs 6c004bc14ed4b40247f97e2f8b18ffe6d7c858d82d2ae822a3e6d72d28eacc15 -->
+<!-- docs-check: UnityProject/Assets/Scripts/ClubSceneBuilder.cs dda30f0575fbaf6e0c7962b002be7a6af9a18ae0f8ca78bd17b1d71d7f190e5e -->
 <!-- docs-check: UnityProject/Assets/Scripts/ClubPulseController.cs f0a3aa937cc6dfc02c78da8db446fe5cfdb2d92f5bc3750a1367ec71586fb3bb -->
 <!-- docs-check: UnityProject/Assets/Scripts/FloorLightShow.cs d86f474af19c0c9a6aa78e9f00f6d7af0000ae71f288991cba50276f39a0199f -->
 <!-- docs-check: UnityProject/Assets/Scripts/StageExtras.cs 3c6b1d384fb4f958f7d472430164bac1bc1b5f142eaa2c49aebc407c6c841885 -->
-<!-- docs-check: UnityProject/Assets/Scripts/TikTokGameController.cs a725209634f5fae2cb752d787e53c8910aeb54202cb46cc38550c0662a7f2300 -->
+<!-- docs-check: UnityProject/Assets/Scripts/TikTokGameController.cs 9d10e69fe322bc1e1b3cbb001c69b94f210f9b2556670726e82ccb577d8fb8f2 -->
 <!-- docs-check: UnityProject/Assets/Scripts/PlayerActor.cs 18f6130192025000d02d40398c7938092e1afd4e14b43b67d9d00a3c040189f7 -->
 <!-- docs-check: UnityProject/Assets/Scripts/RuntimeBootstrap.cs aefb9b114492b7d2232d2c6dbf4541ecc42077723cc4c652d4f602c404c3b2e1 -->
 <!-- docs-check: UnityProject/Assets/Scripts/CharacterMotion.cs 679a091f06cb31b62eeede12820fd585509371926d63502eb89d42ba12cd363d -->
 <!-- docs-check: UnityProject/Assets/Scripts/CharacterLibrary.cs 0583a1c9149da2e4e45497cf76d245e3505747e83629b485625341fd2f35e5f8 -->
-<!-- docs-check: UnityProject/Assets/Scripts/ClubCameraController.cs 423759a5f1da21dcc3a5c0fb537e78084e341e68ff51bbc2b3c460a6863ee449 -->
+<!-- docs-check: UnityProject/Assets/Scripts/ClubCameraController.cs 542b2328bf3f0b3abaa88266546770b4fd425c48a5ab08f7b6a37418ab149939 -->
 <!-- docs-check: UnityProject/Assets/Scripts/PlayerManager.cs 584fb5de6c5eb208d6dc45b960200b8e7aa5dfb33c8216b71a4ec474a274b891 -->
 <!-- docs-check: UnityProject/Assets/Scripts/GiftEffectManager.cs 0942227bdca28aaf68c44b975f59868d2547c679cb6a7d8fafcae17b45a1050a -->
 <!-- docs-check: UnityProject/Assets/Editor/CharacterTextureImporter.cs 4727945070f742451bd9c9619a46be647c7d35c8b3ecda607f471bf8e7b277d2 -->
@@ -118,14 +121,14 @@ Run `node scripts/check-docs.js`. Review behavior notes before refreshing marker
 <!-- docs-check: UnityProject/Assets/Editor/CharacterLibraryChecks.cs a1e3f955dff269f8848a360c36762c59391d156f4923fe69e762eb705003ee22 -->
 <!-- docs-check: UnityProject/Assets/Resources/Characters/club_cast.png 8e3e695c75c4abf259258df064a3aca6d9958ac89b306f54be8c7347f30dbe91 -->
 
-<!-- docs-check: UnityProject/Assets/Scripts/MusicPlaylistPlayer.cs b364a77b49271de35d53e55021f07e179a50f55706323ad69b4ec0ffb9bbb501 -->
+<!-- docs-check: UnityProject/Assets/Scripts/MusicPlaylistPlayer.cs 834f590acac10d69b27fb9631d7d7798de2161e70ec585b33c91a04c5ede032e -->
 
-<!-- docs-check: TikTokBridge/server.js 3cc777ca3567017eef96be5371041c6f129642613df42a6674eae2f331f363f4 -->
+<!-- docs-check: TikTokBridge/server.js c9270eddda5c64529775b428834bd911a2eafd6938331cd917985819d2fd197e -->
 
-<!-- docs-check: TikTokBridge/public/control.js b989cb1973033f2a4e7a2220e30b1fc868cee1d50c9bf84b8cca4d20657f2500 -->
+<!-- docs-check: TikTokBridge/public/control.js 4b280e867e3059d978e15ed719b1e93dc8f4f31eb29cac24b2e273f30c3bff93 -->
 
-<!-- docs-check: TikTokBridge/public/control.html affcf2cd83767adfb502a85125ad9a19ca6309c4c7fe0ced0ccee68d39165fbc -->
+<!-- docs-check: TikTokBridge/public/control.html 1506b7e43e148a30109cea6310ecb5e967fb4b4f629d41ae341a9e311e9d6a3d -->
 
-<!-- docs-check: TikTokBridge/public/control.css 3c5b8de156c8adf8fa5a29601e8b4c162ed69a84824ead7ff69da2cac27086ec -->
+<!-- docs-check: TikTokBridge/public/control.css b0a29a4d1f96b2468a7f032f173affa0c5f87801d2053d3e32ac6ad84493c5f8 -->
 
-<!-- docs-check: TikTokBridge/test/music-upload.test.js c0f1e4eeebdcb52eabbbe8ceb0610b3bcd51cd0104eae4528efc6428ba0aace7 -->
+<!-- docs-check: TikTokBridge/test/music-upload.test.js 0ad26d884df9e380b95e0776681d54603774914bb36f86b44e3754f78b02af0b -->

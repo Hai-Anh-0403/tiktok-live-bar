@@ -124,6 +124,10 @@ namespace TikTokLiveGame
             {
                 AddFeed($"{liveEvent.nickname} đã {liveEvent.type}", new Color(1f, 0.85f, 0.3f));
             }
+            else if (liveEvent.type == "music_order")
+            {
+                MusicPlaylistPlayer.Instance?.RefreshPlaylistOrder();
+            }
             else if (liveEvent.type == "music_reload")
             {
                 MusicPlaylistPlayer.Instance?.ReloadPlaylist(liveEvent.message);

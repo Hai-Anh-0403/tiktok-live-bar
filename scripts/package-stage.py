@@ -32,6 +32,7 @@ SCRIPTS = [
     "TikTokBridge/public/control.html",
     "TikTokBridge/public/control.css",
     "TikTokBridge/test/music-upload.test.js",
+    ".gitignore",
 ]
 FILES = SCRIPTS + [
     "DESIGN.md", "SYSTEM_DOCUMENTATION.md", "Makefile", "LICENSE",
@@ -48,7 +49,7 @@ Base: Hai-Anh-0403/tiktok-live-bar @ eff8b3f132647ecc9e2929e388a7e9f7b542f762.
 4. DESIGN.md and SYSTEM_DOCUMENTATION.md describe the changes and verification limits. The scripts/Makefile files are optional source-package verification helpers.
 5. Open UnityProject with the Unity version in ProjectSettings/ProjectVersion.txt. Let the versioned character importer refresh textures, then run TikTok Live Game > Verify Character Motion, Verify Character Diversity and Verify Rank Wings before building with the existing build.bat. The original Banners/wings-fire, wings-ice and wings-neon resources must remain in the complete repository. This development machine did not run Unity or produce a tested Windows executable.
 6. In the development build verify a new player falls from above, lands on the assigned floor/podium and emits one short ground pulse; repeated gifts do not restart entry and camera stays aimed at the floor during the fall. Check the top scrolling welcome from a real member/viewer event (including a spectator who has not joined the floor), reset/queue expiry, distinct Top wing tiers through rank swaps, high gifts, focus and demotion, character changes, Top podium updates, all other gifts, music, GIF, camera and chroma. F1 opens controls with independent gift/Top buttons; F4 toggles gifts, F5 toggles Top, F3 masks/restores the HUD while preserving these choices. Verify data still updates while hidden. Check all twelve director angles, F6 next angle, smooth transitions, portrait Top/DJ/crane framing and event focus priority, plus F2/F11. Test portrait/desktop and a busy crowd before replacing the live build.
-7. In the control page Nhạc Nền tab, upload multiple MP3/WAV/OGG files and verify only one playback request after the batch; playlist order is filename A-Z (case insensitive). Test the start-from-beginning button, single/per-track compatibility, errors and native automatic next-track/wrap. Keep existing music folders. Install existing locked Bridge dependencies with npm ci before running its tests; no new runtime dependency is added.
+7. In the control page Nhạc Nền tab, upload multiple MP3/WAV/OGG files and verify only one playback request after the batch. Drag the handle (or use arrow buttons/keys) to reorder; verify the order persists after reload, new tracks append and the current song continues while the next song follows the saved order. Update Bridge/control and native source together for music_order handling. Test save/upload failures, the start-from-beginning button, single/per-track compatibility and native next-track/wrap. Keep music folders and playlist.json; do not copy a development playlist over user data. Install existing locked Bridge dependencies with npm ci before tests; no new runtime dependency is added.
 
 The browser preview is a concept renderer with simulated data. It does not connect to TikTok and does not establish Windows rendering or FPS.
 

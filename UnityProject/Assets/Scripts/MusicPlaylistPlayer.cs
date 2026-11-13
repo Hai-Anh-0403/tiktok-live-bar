@@ -1,5 +1,6 @@
 using System;
 using System.Collections;
+using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Linq;
@@ -10,6 +11,12 @@ namespace TikTokLiveGame
 {
     public sealed class MusicPlaylistPlayer : MonoBehaviour
     {
+        [Serializable]
+        private sealed class PlaylistOrder
+        {
+            public string[] files = Array.Empty<string>();
+        }
+
         private const float DefaultVolume = 0.35f;
         private const float FadeSeconds = 1.2f;
         private AudioSource output;
@@ -71,13 +78,29 @@ namespace TikTokLiveGame
             PlayTrack(targetIdx);
         }
 
+        public void RefreshPlaylistOrder()
+        {
+            string currentFile = trackIndex >= 0 && trackIndex < tracks.Length
+                ? Path.GetFileName(tracks[trackIndex]) : null;
+            tracks = FindTracks(out _);
+            if (tracks.Length == 0)
+            {
+                StopAllCoroutines();
+                loading = false;
+                advancePending = false;
+                StopCurrentClip();
+                return;
+            }
+            trackIndex = Array.FindIndex(tracks, track => Path.GetFileName(track) == currentFile);
+        }
+
         private void Update()
         {
-            if (output == null) return;
+            if (output == null || tracks.Length == 0) return;
             if (advancePending && Time.unscaledTime >= advanceAt)
             {
                 advancePending = false;
-                PlayTrack((trackIndex + 1) % tracks.Length);
+                if (tracks.Length > 0) PlayTrack((trackIndex + 1) % tracks.Length);
                 return;
             }
 
@@ -165,7 +188,7 @@ namespace TikTokLiveGame
 
         private void ScheduleAdvance(float delay)
         {
-            if (advancePending) return;
+            if (advancePending || tracks.Length == 0) return;
             advancePending = true;
             advanceAt = Time.unscaledTime + Mathf.Max(0.05f, delay);
         }
@@ -202,7 +225,23 @@ namespace TikTokLiveGame
                     .ToArray();
                 if (files.Length == 0) continue;
                 selectedFolder = folder;
-                return files;
+                try
+                {
+                    string manifest = Path.Combine(folder, "playlist.json");
+                    if (!File.Exists(manifest)) return files;
+                    PlaylistOrder saved = JsonUtility.FromJson<PlaylistOrder>(File.ReadAllText(manifest));
+                    var remaining = new HashSet<string>(files.Select(Path.GetFileName), StringComparer.Ordinal);
+                    var ordered = new List<string>();
+                    foreach (string file in saved?.files ?? Array.Empty<string>())
+                        if (file != null && remaining.Remove(file)) ordered.Add(Path.Combine(folder, file));
+                    ordered.AddRange(files.Where(file => remaining.Contains(Path.GetFileName(file))));
+                    return ordered.ToArray();
+                }
+                catch (Exception error) when (error is IOException || error is UnauthorizedAccessException || error is ArgumentException)
+                {
+                    Debug.LogWarning($"Music playlist order could not load: {error.Message}");
+                    return files;
+                }
             }
             selectedFolder = string.Empty;
             return Array.Empty<string>();

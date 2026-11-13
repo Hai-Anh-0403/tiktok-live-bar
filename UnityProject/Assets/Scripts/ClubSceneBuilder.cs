@@ -7,6 +7,9 @@ namespace TikTokLiveGame
         private const int FloorLightingLayer = 8;
         private const float DjBoothHeightOffset = 0.85f;
         private static readonly System.Collections.Generic.List<DiscoLight> discoLights = new();
+        private static readonly Vector3 backdropAnchor = new(0f, -4.4f, -12.5f);
+        private static Transform backdropRoot;
+        private static Vector3 backdropSize;
 
         public static void Build()
         {
@@ -89,6 +92,8 @@ namespace TikTokLiveGame
             ceilingMat.mainTextureOffset = new Vector2(0, 1);
 
             GameObject bgRoot = new GameObject("AmPhuBackdrop_Room");
+            backdropRoot = bgRoot.transform;
+            backdropSize = new Vector3(W, H, D);
 
             GameObject centerQuad = GameObject.CreatePrimitive(PrimitiveType.Quad);
             centerQuad.name = "AmPhuBackdrop_Center";
@@ -149,6 +154,24 @@ namespace TikTokLiveGame
             AddLight("Club Cyan Wash", new Vector3(-6f, 7f, 1f), new Color(0.26f, 0.91f, 0.88f), 4.8f, 20f);
             AddLight("Club Pink Wash", new Vector3(6f, 7f, 0f), new Color(1f, 0.31f, 0.64f), 4.6f, 20f);
             AddLight("Stage Gold Wash", new Vector3(0f, 8f, -7f), new Color(1f, 0.77f, 0.42f), 5.8f, 23f);
+        }
+
+        public static void EnsureBackdropContains(Camera camera)
+        {
+            if (backdropRoot == null || camera == null) return;
+            float near = camera.nearClipPlane;
+            float halfHeight = near * Mathf.Tan(camera.fieldOfView * Mathf.Deg2Rad * 0.5f);
+            float halfWidth = halfHeight * camera.aspect;
+            float padding = 1f + Mathf.Sqrt(near * near + halfHeight * halfHeight + halfWidth * halfWidth);
+            Vector3 offset = camera.transform.position - backdropAnchor;
+            float scale = Mathf.Max(1f, backdropRoot.localScale.x);
+            scale = Mathf.Max(scale, (Mathf.Abs(offset.x) + padding) / (backdropSize.x * 0.5f));
+            scale = Mathf.Max(scale, (Mathf.Abs(offset.y) + padding) / (backdropSize.y * 0.5f));
+            scale = Mathf.Max(scale, (offset.z + padding) / backdropSize.z);
+            if (scale <= backdropRoot.localScale.x) return;
+            // Keep the original back center fixed; only grow to avoid breathing during focus.
+            backdropRoot.localScale = Vector3.one * scale;
+            backdropRoot.position = backdropAnchor * (1f - scale);
         }
 
         private static void CreateFestivalSet()

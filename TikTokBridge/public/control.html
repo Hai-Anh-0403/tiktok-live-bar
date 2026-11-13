@@ -112,7 +112,7 @@
                     <h2 class="card-title">📤 Upload Nhạc Mới</h2>
                 </div>
             </div>
-            <p class="help" id="music-upload-help" style="margin-bottom:12px;">Chọn một hoặc nhiều file <strong>.mp3, .wav, .ogg</strong>. Một file: phát bài vừa tải. Nhiều file: tải xong tất cả rồi phát toàn bộ thư mục theo tên A→Z, không phân biệt hoa/thường; giữ các bài cũ và tự chuyển bài, lặp danh sách. Đặt tiền tố <strong>01, 02…</strong> để chọn thứ tự riêng.</p>
+            <p class="help" id="music-upload-help" style="margin-bottom:12px;">Chọn một hoặc nhiều file <strong>.mp3, .wav, .ogg</strong>. Một file: phát bài vừa tải. Nhiều file: tải xong tất cả rồi phát toàn bộ thư mục theo thứ tự đã lưu; giữ các bài cũ và tự chuyển bài, lặp danh sách. Bài mới nối vào cuối theo A→Z.</p>
             <label class="field-label" for="music-file-input">Chọn các bài nhạc</label>
             <div class="input-row" style="margin-bottom:12px;">
                 <input type="file" id="music-file-input" multiple accept=".mp3,.wav,.ogg" aria-describedby="music-upload-help" style="background:var(--bg-input);padding:8px;border-radius:6px;width:100%;min-width:0;color:var(--text);">
@@ -130,7 +130,8 @@
                 <button id="btn-refresh-music" class="btn btn-secondary btn-sm">Làm mới</button>
             </div>
             <button id="btn-play-music-list" class="btn btn-secondary btn-full" style="margin-bottom:12px;">Phát từ đầu danh sách</button>
-            <div id="music-file-list" class="shortcut-list" style="max-height:220px;overflow-y:auto;">
+            <p class="help" id="music-order-help">Kéo tay nắm ↕ để đổi thứ tự, hoặc dùng phím ↑/↓ và nút lên/xuống. Tự lưu, không cần đổi tên hay thêm tiền tố. Bài đang phát không bị ngắt.</p>
+            <div aria-describedby="music-order-help" id="music-file-list" class="shortcut-list" style="max-height:220px;overflow-y:auto;">
                 <p style="padding:10px;color:var(--text-sub);font-size:13px;">Đang tải danh sách...</p>
             </div>
         </div>
