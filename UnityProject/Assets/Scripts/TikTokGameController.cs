@@ -385,9 +385,7 @@ namespace TikTokLiveGame
                 if (scoreBadgeBorder != null) GUI.DrawTexture(new Rect(badgeRect.x, badgeRect.y, badgeRect.width, 1.5f), scoreBadgeBorder);
                 if (coinIcon != null)
                     GUI.DrawTexture(new Rect(badgeRect.x + 6f, badgeRect.y + 4f, 16f, 16f), coinIcon, ScaleMode.ScaleToFit, true);
-                string scoreText = top[index].Score >= 10000
-                    ? $"{top[index].Score:N0}"
-                    : $"{top[index].Score:N0} xu";
+                string scoreText = $"{top[index].Score:N0}";
                 DrawShadowLabel(new Rect(badgeRect.x + 25f, badgeRect.y, badgeRect.width - 28f, 24f), scoreText, giftCoinStyle, new Color(1f, 0.95f, 0.28f));
             }
         }
